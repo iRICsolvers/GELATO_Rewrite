@@ -242,7 +242,7 @@
 		</Tab>
 
 		<!-- プライマリートレーサーの設定 -->
-		<Tab name="primary_tracers_setting" caption="Primary nomal tracers setting">
+		<Tab name="primary_tracers_setting" caption="Primary normal tracers setting">
 
 			<!-- トレースするかどうか -->
 			<Item name="is_trace_primary" caption="Whether to trace the primary tracer">
@@ -402,7 +402,7 @@
 		</Tab>
 
 		<!-- セカンダリートレーサーの設定 -->
-		<Tab name="secondary_tracers_setting" caption="secondary nomal tracers setting">
+		<Tab name="secondary_tracers_setting" caption="secondary normal tracers setting">
 
 			<!-- トレースするかどうか -->
 			<Item name="is_trace_secondary" caption="Whether to trace the secondary tracer">
@@ -1196,14 +1196,14 @@
 				<!-- 拡散係数a -->
 				<Item name="a_diff" caption="A value in D=A Nu + B">
 					<Definition valueType="real" default="1">
-						<Condition type="isEqual" target="is_consider_Diffusio" value="1"/>
+						<Condition type="isEqual" target="is_consider_Diffusion" value="1"/>
 					</Definition>
 				</Item>
 
 				<!-- 拡散定数b -->
 				<Item name="b_diff" caption="B value (m2 s-1)">
 					<Definition valueType="real" default="0">
-						<Condition type="isEqual" target="is_consider_Diffusio" value="1"/>
+						<Condition type="isEqual" target="is_consider_Diffusion" value="1"/>
 					</Definition>
 				</Item>
 
