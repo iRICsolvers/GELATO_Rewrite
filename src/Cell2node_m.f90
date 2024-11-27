@@ -28,8 +28,8 @@ contains
     node_array = 0.0d0
 
     ! 内部ノード: 周囲4つのセルの平均をノードに割り当てる
-    do i = 2, cell_count_i
-      do j = 2, cell_count_j
+    do j = 2, cell_count_j
+      do i = 2, cell_count_i
         node_array(i, j) = (cell_array(i - 1, j - 1) + cell_array(i - 1, j) + &
                             cell_array(i, j - 1) + cell_array(i, j))*0.25d0
       end do
@@ -79,8 +79,8 @@ contains
     cell_array = 0.0d0
 
     ! セルの値を周囲4つのノードの平均で計算
-    do i = 1, node_count_i - 1
-      do j = 1, node_count_j - 1
+    do j = 1, node_count_j - 1
+      do i = 1, node_count_i - 1
         cell_array(i, j) = (node_array(i, j) + node_array(i + 1, j) + &
                             node_array(i, j + 1) + node_array(i + 1, j + 1))*0.25d0
       end do
@@ -96,8 +96,8 @@ contains
     real(8), dimension(im - 1, jm - 1), intent(inout) :: y_1
 
     y_1 = 0.
-    do i = 2, im
-      do j = 2, jm
+    do j = 2, jm
+      do i = 2, im
         y_1(i - 1, j - 1) = y(i, j)
       end do
     end do

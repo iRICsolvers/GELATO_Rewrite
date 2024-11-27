@@ -916,7 +916,7 @@ contains
         !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
         ! 側面の壁では反射する
         !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-        if (moved_position_eta >= 1.) moved_position_eta = 1.-(moved_position_eta + - 1.)
+        if (moved_position_eta >= 1.) moved_position_eta = 1.-(moved_position_eta - 1.)
         if (moved_position_eta <= 0.) moved_position_eta = -moved_position_eta
 
         !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1065,9 +1065,8 @@ contains
     add_counter = 0
 
     ! 全格子をチェック
-    do cell_index_i = 1, cell_count_i
-      do cell_index_j = 1, cell_count_j
-
+    do cell_index_j = 1, cell_count_j
+      do cell_index_i = 1, cell_count_i
         ! セルに1つ以上トレーサーがある場合は次のセルへ
         if (tracer%tracer_number_in_cell(cell_index_i, cell_index_j) >= 1) cycle
 
@@ -1076,8 +1075,8 @@ contains
         supply_position_j = cell_index_j
 
         ! 座標計算
-        supply_position_xi = grid_interval_xi*(dble(cell_index_i-1) + 0.5)
-        supply_position_eta = grid_interval_eta*(dble(cell_index_j-1) + 0.5)
+        supply_position_xi = grid_interval_xi*(dble(cell_index_i - 1) + 0.5)
+        supply_position_eta = grid_interval_eta*(dble(cell_index_j - 1) + 0.5)
 
         ! セル内の座標計算
         supply_position_xi_in_cell = grid_interval_xi/2

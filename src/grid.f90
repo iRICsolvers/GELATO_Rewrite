@@ -203,8 +203,8 @@ contains
     !==========================================================================================
     ! 水路延長、ξ,η方向のスケーリング係数の計算
     !==========================================================================================
-    do i = 1, cell_count_i
-      do j = 1, node_count_j
+    do j = 1, node_count_j
+      do i = 1, cell_count_i
         grid_physical_distance_xi = sqrt((node_coordinate_x(i + 1, j) - node_coordinate_x(i, j))**2 + (node_coordinate_y(i + 1, j) - node_coordinate_y(i, j))**2)
         grid_physical_distance_xi_min = min(grid_physical_distance_xi, grid_physical_distance_xi_min)
         scale_factor_xi(i, j) = grid_interval_xi/grid_physical_distance_xi
@@ -212,8 +212,8 @@ contains
       end do
     end do
 
-    do i = 1, node_count_i
-      do j = 1, cell_count_j
+    do j = 1, cell_count_j
+      do i = 1, node_count_i
         grid_physical_distance_eta = sqrt((node_coordinate_x(i, j + 1) - node_coordinate_x(i, j))**2 + (node_coordinate_y(i, j + 1) - node_coordinate_y(i, j))**2)
         grid_physical_distance_eta_min = min(grid_physical_distance_eta, grid_physical_distance_eta_min)
         scale_factor_eta(i, j) = grid_interval_eta/grid_physical_distance_eta
@@ -223,8 +223,8 @@ contains
     !==========================================================================================
     ! ξ、η方向でのx,yの勾配(中央差分方法)
     !==========================================================================================
-    do i = 1, cell_count_i
-      do j = 1, cell_count_j
+    do j = 1, cell_count_j
+      do i = 1, cell_count_i
         x_gradient_in_xi(i, j) = (node_coordinate_x(i + 1, j + 1) + node_coordinate_x(i + 1, j) - node_coordinate_x(i, j + 1) - node_coordinate_x(i, j))/(2.*grid_interval_xi)
         x_gradient_in_eta(i, j) = (node_coordinate_x(i + 1, j + 1) + node_coordinate_x(i, j + 1) - node_coordinate_x(i + 1, j) - node_coordinate_x(i, j))/(2.*grid_interval_eta)
         y_gradient_in_xi(i, j) = (node_coordinate_y(i + 1, j + 1) + node_coordinate_y(i + 1, j) - node_coordinate_y(i, j + 1) - node_coordinate_y(i, j))/(2.*grid_interval_xi)
@@ -232,9 +232,8 @@ contains
       end do
     end do
 
-    do i = 1, node_count_i
-      do j = 1, node_count_j
-
+    do j = 1, node_count_j
+      do i = 1, node_count_i
         !==========================================================================================
         ! ξ、η方向でのx,yの勾配(2点差分方法)
         !==========================================================================================
