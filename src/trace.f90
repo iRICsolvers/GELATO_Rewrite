@@ -774,7 +774,7 @@ contains
 
       is_alive_tracer = 1
 
-      if (tracer%is_tracer_traped=1) then   ! トラップされたトレーサーは移動しない
+      if (tracer%is_tracer_traped(tracer_index) == 1) then   ! トラップされたトレーサーは移動しない
 
         ! フラグをリセット
         is_tracer_movable = 1
@@ -1019,30 +1019,78 @@ contains
 
   !******************************************************************************************
   !> @brief トレーサーを分裂させる
-  !> @param[in]  suffix  トレーサーのタイプを表す文字列（例: "primary", "secondary"）
-  !> @param[inout] tracer  移動するトレーサー構造体 (normal_tracer型)
-  !> @param[inout] tracer_tmp  分裂で生じたトレーサーを一時保持する仮トレーサー構造体 (normal_tracer型)
+  !> @param[inout] tracer  分裂するトレーサー構造体 (normal_tracer型)
   !******************************************************************************************
-  subroutine clone_tracer(suffix, tracer, tracer_tmp)
-    !> トレーサーグループの名前
-    character(len=*), intent(in) :: suffix
+  subroutine clone_tracer(tracer)
     !> 移動対象のトレーサーグループ
     type(normal_tracer), intent(inout) :: tracer
-    !> 移動対象の仮トレーサーグループ
-    type(normal_tracer_tmp), intent(inout) :: tracer_tmp
     !> 何個目のトレーサーかのインデックス
     integer :: tracer_index
+    !> 分裂したトレーサーの数
+    integer :: cloning_counter
+
+    cloning_counter = 0
 
     !==========================================================================================
     ! 各トレーサーについて
     !==========================================================================================
-
     do tracer_index = 1, tracer%total_tracer_number
 
-      if (tracer%is_tracer_movable(tracer_index) == 1 .and. tracer%is_tracer_traped(tracer_index) == 0) then
-
+      !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      ! トレーサーの分裂条件をチェック
+      !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      ! cloning_option=2の場合は、指定されたセルでのみ分裂する
+      if (tracer%cloning_option == 2) then
+        if (is_cloning_cell(tracer%cell_index_i(tracer_index), tracer%cell_index_j(tracer_index)) == 0) then
+          cycle ! 分裂しない場合は次のトレーサーへ
+        end if
       end if
+
+      ! 動かないトレーサーは分裂しない
+      if (tracer%is_tracer_movable(tracer_index) == 0 .or. tracer%is_tracer_traped(tracer_index) == 1) then
+        cycle ! 分裂しない場合は次のトレーサーへ
+      end if
+
+      ! セル内に2個以上トレーサーがある場合は分裂しない
+      if (tracer%tracer_number_in_cell(tracer%cell_index_i(tracer_index), tracer%cell_index_j(tracer_index)) >= 2) then
+        cycle ! 分裂しない場合は次のトレーサーへ
+      end if
+
+      ! 分裂回数が最大回数を超えている場合は分裂しない
+      if (tracer%tracer_generation(tracer_index) >= tracer%max_generation) then
+        cycle ! 分裂しない場合は次のトレーサーへ
+      end if
+
+      call increment_integer_value(cloning_counter, 1)
+
+      !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      ! 既存トレーサーの分裂処理
+      !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      tracer%tracer_weight(tracer_index) = tracer%tracer_weight(tracer_index)/2
+      call increment_integer_value(tracer%tracer_generation(tracer_index), 1)
+
+      !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      ! 分裂して追加されたトレーサーの処理
+      !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      call increment_integer_value(tracer%tracer_number_in_cell(tracer%cell_index_i(tracer_index), tracer%cell_index_j(tracer_index)), 1)
+
+      tracer%tracer_coordinate_xi(tracer%total_tracer_number + cloning_counter) = tracer%tracer_coordinate_xi(tracer_index)
+      tracer%tracer_coordinate_eta(tracer%total_tracer_number + cloning_counter) = tracer%tracer_coordinate_eta(tracer_index)
+      tracer%cell_index_i(tracer%total_tracer_number + cloning_counter) = tracer%cell_index_i(tracer_index)
+      tracer%cell_index_j(tracer%total_tracer_number + cloning_counter) = tracer%cell_index_j(tracer_index)
+      tracer%tracer_coordinate_xi_in_cell(tracer%total_tracer_number + cloning_counter) = tracer%tracer_coordinate_xi_in_cell(tracer_index)
+      tracer%tracer_coordinate_eta_in_cell(tracer%total_tracer_number + cloning_counter) = tracer%tracer_coordinate_eta_in_cell(tracer_index)
+      tracer%tracer_weight(tracer%total_tracer_number + cloning_counter) = tracer%tracer_weight(tracer_index)
+      tracer%tracer_generation(tracer%total_tracer_number + cloning_counter) = tracer%tracer_generation(tracer_index)
+      tracer%is_tracer_movable(tracer%total_tracer_number + cloning_counter) = tracer%is_tracer_movable(tracer_index)
+      tracer%is_tracer_traped(tracer%total_tracer_number + cloning_counter) = tracer%is_tracer_traped(tracer_index)
+      tracer%is_tracer_invincibl(tracer%total_tracer_number + cloning_counter) = tracer%is_tracer_invincibl(tracer_index)
+
     end do
+
+    ! ループ内で加算すると追加されたトレーサーまで処理されてしまうので、最後に加算
+    tracer%total_tracer_number = tracer%total_tracer_number + cloning_counter
+
   end subroutine clone_tracer
 
   !******************************************************************************************
