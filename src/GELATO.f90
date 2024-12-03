@@ -296,8 +296,8 @@ program gelate
           !------------------------------------------------------------------------------------------
           ! トレーサーの追跡
           !------------------------------------------------------------------------------------------
-          if (is_trace_primary == 1 .and. primary%total_tracer_number > 0) call move_tracer(primary, primary_tmp)
-          if (is_trace_secondary == 1 .and. secondary%total_tracer_number > 0) call move_tracer(secondary, secondary_tmp)
+          if (is_trace_primary == 1 .and. primary%total_tracer_number > 0) call move_tracer(primary)
+          if (is_trace_secondary == 1 .and. secondary%total_tracer_number > 0) call move_tracer(secondary)
 
           !------------------------------------------------------------------------------------------
           ! 通常トレーサーの投入
@@ -311,15 +311,15 @@ program gelate
 
         end do !time_step_trace = 1, tracking_count
 
-          !------------------------------------------------------------------------------------------
-          ! トレーサーのクローン
-          !------------------------------------------------------------------------------------------
-          if (is_trace_primary == 1 .and. primary%is_tracer_cloning == 1) then
+        !------------------------------------------------------------------------------------------
+        ! トレーサーのクローン
+        !------------------------------------------------------------------------------------------
+        if (is_trace_primary == 1 .and. primary%is_tracer_cloning == 1) then
 
-            if (primary%cloning_option == 0) call add_all_empty_cells(primary)
-            if (primary%cloning_option == 1 .or. primary%cloning_option == 2) call clone_tracer(primary)
+          if (primary%cloning_option == 0) call add_all_empty_cells(primary)
+          if (primary%cloning_option == 1 .or. primary%cloning_option == 2) call clone_tracer(primary)
 
-          end if
+        end if
 
         !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         ! トレーサー数の統計を計算
