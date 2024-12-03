@@ -1,5 +1,15 @@
 ﻿<?xml version="1.0" encoding="UTF-8"?>
-<SolverDefinition xmlns="www.iric.net/SolverDefinition/1.0" name="RE_GELATO" caption="Re:GELATO" version="0.0.24091801" copyright="Keita Hoshino" release="2024.09.18" homepage="https://i-ric.org/yasu/" executable="GELATO.exe" iterationtype="time" gridtype="structured2d">
+<SolverDefinition 
+	xmlns="www.iric.net/SolverDefinition/1.0" 
+	name="RE_GELATO" 
+	caption="Re:GELATO" 
+	version="0.0.24120301" 
+	copyright="Keita Hoshino" 
+	release="2024.12.03" 
+	homepage="https://i-ric.org/yasu/" 
+	executable="ReGELATO.exe" 
+	iterationtype="time" 
+	gridtype="structured2d">
 
 	<!-- 計算条件 -->
 	<CalculationCondition>
