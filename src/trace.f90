@@ -774,7 +774,7 @@ contains
 
       is_alive_tracer = 1
 
-      if (tracer%is_tracer_traped(tracer_index) == 1) then   ! トラップされたトレーサーは移動しない
+      if (tracer%is_tracer_traped(tracer_index) == 0) then   ! トラップされたトレーサーは移動しない
 
         ! フラグをリセット
         is_tracer_movable = 1
