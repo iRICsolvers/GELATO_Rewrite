@@ -88,9 +88,11 @@ module trace
     !> トレーサーが動くことができるか
     integer, dimension(:), allocatable :: is_tracer_movable
     !> トレーサーがトラップにとらわれているか
-    integer, dimension(:), allocatable :: is_tracer_traped
+    integer, dimension(:), allocatable :: is_tracer_trapped
     !> トレーサーが無敵状態か
-    integer, dimension(:), allocatable :: is_tracer_invincibl
+    integer, dimension(:), allocatable :: is_tracer_invincible
+    !> トレーサーが生き残るか
+    integer, dimension(:), allocatable :: is_tracer_arrived
 
     !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     ! !トレーサー数の統計
@@ -112,56 +114,10 @@ module trace
 
   end type normal_tracer
 
-  !> 仮通常トレーサーの構造体
-  type :: normal_tracer_tmp
-
-    !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    ! 計算で使用する値
-    !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-    !> トレーサーのξ座標
-    double precision, dimension(:), allocatable :: tracer_coordinate_xi
-    !> トレーサーのη座標
-    double precision, dimension(:), allocatable :: tracer_coordinate_eta
-    !> トレーサーのあるセルインデックス
-    integer, dimension(:), allocatable :: cell_index_i
-    !> トレーサーのあるセルインデックス
-    integer, dimension(:), allocatable :: cell_index_j
-    !> セル内でのトレーサーのξ座標
-    double precision, dimension(:), allocatable :: tracer_coordinate_xi_in_cell
-    !> セル内でのトレーサーのη座標
-    double precision, dimension(:), allocatable :: tracer_coordinate_eta_in_cell
-    !> トレーサーの重み
-    double precision, dimension(:), allocatable :: tracer_weight
-    !> トレーサーの世代
-    integer, dimension(:), allocatable :: tracer_generation
-    !> トレーサーが動くことができるか
-    integer, dimension(:), allocatable :: is_tracer_movable
-    !> トレーサーがトラップにとらわれているか
-    integer, dimension(:), allocatable :: is_tracer_traped
-    !> トレーサーが無敵状態か
-    integer, dimension(:), allocatable :: is_tracer_invincibl
-
-    !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    ! !トレーサー数の統計
-    !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    !> トレーサーの総数
-    integer :: total_tracer_number
-    !> セル内のトレーサー総数
-    integer, dimension(:, :), allocatable :: tracer_number_in_cell
-    !>セル内の重み付きトレーサー数
-    double precision, dimension(:, :), allocatable ::  Weighted_number_in_cell
-
-  end type normal_tracer_tmp
-
   !> プライマートレーサーのパラメータ群
   type(normal_tracer) :: primary
-  !> 移動後のトレーサーを格納するための一時配列
-  type(normal_tracer_tmp) :: primary_tmp
   !> セカンダリートレーサーのパラメータ群
   type(normal_tracer) :: secondary
-  !> 移動後のトレーサーを格納するための一時配列
-  type(normal_tracer_tmp) :: secondary_tmp
 
   !******************************************************************************************
   ! 軌跡追跡トレーサー
@@ -194,13 +150,11 @@ contains
     ! プライマリートレーサー
     !==========================================================================================
     if (is_trace_primary) call Initialize_Normal_Tracer_type("primary", primary)
-    if (is_trace_primary) call Initialize_normal_tracer_tmp_type(primary%max_number, primary_tmp)
 
     !==========================================================================================
     ! セカンダリートレーサー
     !==========================================================================================
     if (is_trace_secondary) call Initialize_Normal_Tracer_type("secondary", secondary)
-    if (is_trace_secondary) call Initialize_Normal_Tracer_tmp_type(secondary%max_number, secondary_tmp)
 
   end subroutine Initialize_Normal_Tracer
 
@@ -240,8 +194,9 @@ contains
     allocate (tracer%tracer_weight(tracer%max_number))
     allocate (tracer%tracer_generation(tracer%max_number))
     allocate (tracer%is_tracer_movable(tracer%max_number))
-    allocate (tracer%is_tracer_traped(tracer%max_number))
-    allocate (tracer%is_tracer_invincibl(tracer%max_number))
+    allocate (tracer%is_tracer_trapped(tracer%max_number))
+    allocate (tracer%is_tracer_invincible(tracer%max_number))
+    allocate (tracer%is_tracer_arrived(tracer%max_number))
 
     allocate (tracer%tracer_number_in_cell(cell_count_i, cell_count_j))
     allocate (tracer%Weighted_number_in_cell(cell_count_i, cell_count_j))
@@ -259,8 +214,9 @@ contains
     tracer%tracer_weight = 0.0
     tracer%tracer_generation = 0
     tracer%is_tracer_movable = 0
-    tracer%is_tracer_traped = 0
-    tracer%is_tracer_invincibl = 0
+    tracer%is_tracer_trapped = 0
+    tracer%is_tracer_invincible = 0
+    tracer%is_tracer_arrived = 0
 
     tracer%total_tracer_number = 0
 
@@ -272,72 +228,6 @@ contains
     tracer%time_averaged_tracer_number_in_cell = 0.0
 
   end subroutine Initialize_Normal_Tracer_type
-
-  !******************************************************************************************
-  !> @brief 通常トレーサーの仮タイプのメモリ確保を行う
-  !> @param[in]  suffix  トレーサーのタイプを表す文字列（例: "primary", "secondary"）
-  !> @param[inout] tracer_tmp  初期化されるトレーサー構造体 (normal_tracer型)
-  !******************************************************************************************
-  subroutine Initialize_normal_tracer_tmp_type(max_number, tracer_tmp)
-    integer, intent(in) :: max_number
-    type(normal_tracer_tmp), intent(inout) :: tracer_tmp
-
-    allocate (tracer_tmp%tracer_coordinate_xi(max_number))
-    allocate (tracer_tmp%tracer_coordinate_eta(max_number))
-    allocate (tracer_tmp%cell_index_i(max_number))
-    allocate (tracer_tmp%cell_index_j(max_number))
-    allocate (tracer_tmp%tracer_coordinate_xi_in_cell(max_number))
-    allocate (tracer_tmp%tracer_coordinate_eta_in_cell(max_number))
-    allocate (tracer_tmp%tracer_weight(max_number))
-    allocate (tracer_tmp%tracer_generation(max_number))
-    allocate (tracer_tmp%is_tracer_movable(max_number))
-    allocate (tracer_tmp%is_tracer_traped(max_number))
-    allocate (tracer_tmp%is_tracer_invincibl(max_number))
-
-    allocate (tracer_tmp%tracer_number_in_cell(cell_count_i, cell_count_j))
-    allocate (tracer_tmp%Weighted_number_in_cell(cell_count_i, cell_count_j))
-
-    tracer_tmp%tracer_coordinate_xi = 0.0
-    tracer_tmp%tracer_coordinate_eta = 0.0
-    tracer_tmp%cell_index_i = 0
-    tracer_tmp%cell_index_j = 0
-    tracer_tmp%tracer_coordinate_xi_in_cell = 0.0
-    tracer_tmp%tracer_coordinate_eta_in_cell = 0.0
-    tracer_tmp%tracer_weight = 0.0
-    tracer_tmp%tracer_generation = 0
-    tracer_tmp%is_tracer_movable = 0
-    tracer_tmp%is_tracer_traped = 0
-    tracer_tmp%is_tracer_invincibl = 0
-
-    tracer_tmp%total_tracer_number = 0
-    tracer_tmp%tracer_number_in_cell = 0
-    tracer_tmp%Weighted_number_in_cell = 0.0
-
-  end subroutine Initialize_normal_tracer_tmp_type
-
-  !******************************************************************************************
-  !> @brief 通常トレーサーの各トレーサーの値をリセット
-  !> @param[inout] tracer_tmp  リセットされるトレーサー構造体 (normal_tracer型)
-  !******************************************************************************************
-  subroutine reset_normal_tracer(tracer_tmp)
-    type(normal_tracer_tmp), intent(inout) :: tracer_tmp
-
-    tracer_tmp%tracer_coordinate_xi = 0.0
-    tracer_tmp%tracer_coordinate_eta = 0.0
-    tracer_tmp%cell_index_i = 0
-    tracer_tmp%cell_index_j = 0
-    tracer_tmp%tracer_coordinate_xi_in_cell = 0.0
-    tracer_tmp%tracer_coordinate_eta_in_cell = 0.0
-    tracer_tmp%tracer_weight = 0.0
-    tracer_tmp%tracer_generation = 0
-    tracer_tmp%is_tracer_movable = 0
-    tracer_tmp%is_tracer_traped = 0
-    tracer_tmp%is_tracer_invincibl = 0
-
-    tracer_tmp%total_tracer_number = 0
-    tracer_tmp%tracer_number_in_cell = 0
-
-  end subroutine reset_normal_tracer
 
   !******************************************************************************************
   !> @brief トレーサーが位置するセルのインデックスを探査してセル内での座標も計算する
@@ -468,6 +358,22 @@ contains
   end subroutine increment_real_value_array
 
   !******************************************************************************************
+  !> @brief   トレーサーの数を更新するサブルーチン
+  !> @param[inout] tracer　トレーサーの位置、速度、重み、世代などの情報を含む構造体
+  !******************************************************************************************
+  subroutine update_tracer_count(tracer, tracer_index)
+    implicit none
+    type(normal_tracer), intent(inout) :: tracer
+    integer, intent(in) :: tracer_index
+
+    call increment_integer_value(tracer%total_tracer_number, 1)
+    call increment_integer_value(tracer%tracer_number_in_cell(tracer%cell_index_i(tracer_index), tracer%cell_index_j(tracer_index)), 1)
+    call increment_real_value(tracer%Weighted_number_in_cell(tracer%cell_index_i(tracer_index), tracer%cell_index_j(tracer_index)), &
+                              tracer%tracer_weight(tracer_index))
+
+  end subroutine update_tracer_count
+
+  !******************************************************************************************
   !> @brief ボックスミュラーによる正規分布乱数を発生させる
   !> @param[inout] z0 正規分布乱数(cos成分)
   !> @param[inout] z1 正規分布乱数(sin成分)
@@ -489,7 +395,8 @@ contains
 
   !******************************************************************************************
   !> @brief トレーサー位置のスカラーから追加や移動をさせるかチェックする
-  !> @param[in] tracer
+  !> @param[in] movable_critical_depth 移動限界水深
+  !> @param[in] movable_critical_u_star 移動限界摩擦速度
   !> @param[in] tracer_position_xi トレーサーのξ方向座標
   !> @param[in] tracer_position_eta トレーサーのη方向座標
   !> @param[in] tracer_position_i 投入地点のセルインデックス
@@ -500,9 +407,11 @@ contains
   !> @param[inout] is_tracer_movable トレーサーが動くか
   ! メモ：障害物に関するチェックは移動と追加で扱いが異なるのでこの中では行わない
   !******************************************************************************************
-  subroutine check_tracer(tracer, tracer_position_xi, tracer_position_eta, tracer_position_i, tracer_position_j, tracer_position_xi_in_cell, tracer_position_eta_in_cell, is_add_tracer, is_tracer_movable)
-    !> 対象のトレーサー
-    type(normal_tracer), intent(inout) :: tracer
+  subroutine check_tracer(Movable_Critical_depth, Movable_Critical_u_star, tracer_position_xi, tracer_position_eta, tracer_position_i, tracer_position_j, tracer_position_xi_in_cell, tracer_position_eta_in_cell, is_add_tracer, is_tracer_movable)
+    !> 移動限界水深
+    double precision :: Movable_Critical_depth
+    !> 移動限界摩擦速度
+    double precision :: Movable_Critical_u_star
     !> ξ方向トレーサー座標
     double precision, intent(in) :: tracer_position_xi
     !> η方向トレーサー座標
@@ -511,9 +420,9 @@ contains
     integer, intent(in) :: tracer_position_i
     !> 投入地点のセルインデックス
     integer, intent(in) :: tracer_position_j
-    !> セル内でのξ方向投入地点座標
+    !> セル内での移動後のξ方向座標
     double precision, intent(in) :: tracer_position_xi_in_cell
-    !> セル内でのη方向投入地点座標
+    !> セル内での移動後のη方向座標
     double precision, intent(in) :: tracer_position_eta_in_cell
     !> 投入地点の水深
     double precision :: tracer_point_depth
@@ -538,7 +447,7 @@ contains
                                                               tracer_position_eta_in_cell)
 
     ! 投入箇所の水深が移動可能水深以上かつ停止したトレーサーを除去するかチェック
-    if (tracer%Movable_Critical_depth > tracer_point_depth) then
+    if (Movable_Critical_depth > tracer_point_depth) then
 
       is_tracer_movable = 0
 
@@ -549,7 +458,7 @@ contains
     end if
 
     ! 投入箇所の摩擦速度が移動可能水深以上かつ停止したトレーサーを除去するかチェック
-    if (tracer%Movable_Critical_u_star > tracer_point_u_star) then
+    if (Movable_Critical_u_star > tracer_point_u_star) then
 
       is_tracer_movable = 0
 
@@ -560,6 +469,64 @@ contains
     end if
 
   end subroutine check_tracer
+
+  !******************************************************************************************
+  !> @brief 生きているトレーサーだけを残すサブルーチン
+  !> @param[inout] tracer  トレーサーの位置、速度、重み、世代などの情報を含む構造体
+  !> @param[in] total_tracer_number_before  削除する前のトレーサーの総数
+  !******************************************************************************************
+  subroutine remove_dead_tracer(tracer, total_tracer_number_before)
+    implicit none
+    !> トレーサーの位置、速度、重み、世代などの情報を含む構造体
+    type(normal_tracer), intent(inout) :: tracer
+    !> 削除する前のトレーサーの総数
+    integer, intent(in) :: total_tracer_number_before
+    !> トレーサーのインデックス
+    integer :: tracer_index
+    !> 生存しているトレーサーのインデックス
+    integer :: alive_tracer_index
+
+    ! 生存しているトレーサーのインデックスを初期化
+    alive_tracer_index = 0
+
+    ! 全てのトレーサーをループして生存しているものを見つける
+    do tracer_index = 1, total_tracer_number_before
+      if (tracer%is_tracer_arrived(tracer_index) == 1) then
+        ! 生存しているトレーサーのインデックスを増加
+        alive_tracer_index = alive_tracer_index + 1
+        ! 生存しているトレーサーのプロパティを新しい位置にコピー
+        tracer%tracer_coordinate_xi(alive_tracer_index) = tracer%tracer_coordinate_xi(tracer_index)
+        tracer%tracer_coordinate_eta(alive_tracer_index) = tracer%tracer_coordinate_eta(tracer_index)
+        tracer%cell_index_i(alive_tracer_index) = tracer%cell_index_i(tracer_index)
+        tracer%cell_index_j(alive_tracer_index) = tracer%cell_index_j(tracer_index)
+        tracer%tracer_coordinate_xi_in_cell(alive_tracer_index) = tracer%tracer_coordinate_xi_in_cell(tracer_index)
+        tracer%tracer_coordinate_eta_in_cell(alive_tracer_index) = tracer%tracer_coordinate_eta_in_cell(tracer_index)
+        tracer%tracer_weight(alive_tracer_index) = tracer%tracer_weight(tracer_index)
+        tracer%tracer_generation(alive_tracer_index) = tracer%tracer_generation(tracer_index)
+        tracer%is_tracer_movable(alive_tracer_index) = tracer%is_tracer_movable(tracer_index)
+        tracer%is_tracer_trapped(alive_tracer_index) = tracer%is_tracer_trapped(tracer_index)
+        tracer%is_tracer_invincible(alive_tracer_index) = tracer%is_tracer_invincible(tracer_index)
+        tracer%is_tracer_arrived(alive_tracer_index) = tracer%is_tracer_arrived(tracer_index)
+      end if
+    end do
+
+    ! 残りのトレーサーのプロパティをリセット
+    do tracer_index = alive_tracer_index + 1, total_tracer_number_before
+      tracer%tracer_coordinate_xi(tracer_index) = 0.0
+      tracer%tracer_coordinate_eta(tracer_index) = 0.0
+      tracer%cell_index_i(tracer_index) = 0
+      tracer%cell_index_j(tracer_index) = 0
+      tracer%tracer_coordinate_xi_in_cell(tracer_index) = 0.0
+      tracer%tracer_coordinate_eta_in_cell(tracer_index) = 0.0
+      tracer%tracer_weight(tracer_index) = 0.0
+      tracer%tracer_generation(tracer_index) = 0
+      tracer%is_tracer_movable(tracer_index) = 0
+      tracer%is_tracer_trapped(tracer_index) = 0
+      tracer%is_tracer_invincible(tracer_index) = 0
+      tracer%is_tracer_arrived(tracer_index) = 0
+    end do
+
+  end subroutine remove_dead_tracer
 
   !******************************************************************************************
   !> @brief トレーサーを追加する
@@ -630,12 +597,13 @@ contains
         ! 誤差範囲内なら誤差を補正
         if (supply_position_eta > tracer%supply_position_eta_end) supply_position_eta = tracer%supply_position_eta_end
 
-        ! 投入フラグをリセット
-        is_add_tracer = 1
-
         !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
         ! 投入箇所に投入できるかチェック
         !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+        ! フラグの初期化
+        is_add_tracer = 1
+        is_tracer_movable = 1
 
         ! 投入地点のセルのインデックスを調べる
         call find_tracer_cell_index(supply_position_xi, supply_position_eta, supply_position_i, supply_position_j, supply_position_xi_in_cell, supply_position_eta_in_cell)
@@ -651,7 +619,8 @@ contains
         end if
 
         ! 投入箇所の水深と摩擦速度を調べる
-        call check_tracer(tracer, &
+        call check_tracer(tracer%Movable_Critical_depth, &
+                          tracer%Movable_Critical_u_star, &
                           supply_position_xi, &
                           supply_position_eta, &
                           supply_position_i, &
@@ -682,8 +651,9 @@ contains
           tracer%tracer_weight(tracer%total_tracer_number) = 1.0
           tracer%tracer_generation(tracer%total_tracer_number) = 1
           tracer%is_tracer_movable(tracer%total_tracer_number) = is_tracer_movable
-          tracer%is_tracer_traped(tracer%total_tracer_number) = 0
-          tracer%is_tracer_invincibl(tracer%total_tracer_number) = 0
+          tracer%is_tracer_trapped(tracer%total_tracer_number) = 0
+          tracer%is_tracer_invincible(tracer%total_tracer_number) = 0
+          tracer%is_tracer_arrived(tracer%total_tracer_number) = 1
 
           if (tracer%total_tracer_number >= tracer%max_number) return
 
@@ -697,25 +667,25 @@ contains
   !******************************************************************************************
   !> @brief トレーサーを移動させる
   !> @param[inout] tracer  移動するトレーサー構造体 (normal_tracer型)
-  !> @param[inout] tracer_tmp  移動後のトレーサーを一時保持する仮トレーサー構造体 (normal_tracer型)
   !******************************************************************************************
-  subroutine move_tracer(tracer, tracer_tmp)
-    !> 移動対象のトレーサーグループ
+  subroutine move_tracer(tracer)
+    !> 移動するトレーサー構造体
     type(normal_tracer), intent(inout) :: tracer
-    !> 移動対象の仮トレーサーグループ
-    type(normal_tracer_tmp), intent(inout) :: tracer_tmp
-    !> 何個目のトレーサーかのインデックス
+    !> トレーサーのインデックス
     integer :: tracer_index
 
-    !> ξ方向移動後座標
+    !> 既存の全てのトレーサーの総数
+    integer :: total_tracer_number_before
+
+    !> 移動後のξ方向座標
     double precision :: moved_position_xi
-    !> η方向移動後座標
+    !> 移動後のη方向座標
     double precision :: moved_position_eta
     !> セル内でのξ方向投入地点座標
     double precision :: moved_position_xi_in_cell
     !> セル内でのη方向投入地点座標
     double precision :: moved_position_eta_in_cell
-    !> 移動後のトレーサーのあるセルのインデックス
+    !> 移動後のセルのj方向インデックス
     integer :: moved_position_i
     !> 移動後のトレーサーのあるセルのインデックス
     integer :: moved_position_j
@@ -740,15 +710,6 @@ contains
     !> トレーサー捕獲判定値
     double precision :: trap_decision_value
 
-    !> トレーサーが動くか
-    integer :: is_tracer_movable
-    !> トレーサを削除するか
-    integer :: is_alive_tracer
-    !> トレーサーがトラップされているか
-    integer :: is_tracer_traped
-    !> トレーサーが無敵か
-    integer :: is_tracer_invincibl
-
     !> ランダムウォークの移動距離の標準偏差
     double precision :: diffusion_std_dev
 
@@ -758,262 +719,288 @@ contains
     !> 正規分布乱数
     double precision :: bm_standard_normal_sin
 
-    !> 移動前のトレーサーの個数
-    integer :: total_tracer_number_before
-
     !> 乱数
     real(8)::drand
 
-    ! 一時配列をリセット
-    call reset_normal_tracer(tracer_tmp)
-
-    !> 移動前のトレーサー数をセット
+    !==========================================================================================
+    ! トレーサーの総数をリセット
+    !==========================================================================================
     total_tracer_number_before = tracer%total_tracer_number
+    tracer%tracer_number_in_cell = 0
+    tracer%total_tracer_number = 0
+    tracer%Weighted_number_in_cell = 0.0
 
     do tracer_index = 1, total_tracer_number_before  ! 既存の全てのトレーサーのループ
 
-      is_alive_tracer = 1
+      !==========================================================================================
+      ! 移動しないトレーサーはここで抜ける
+      !==========================================================================================
 
-      if (tracer%is_tracer_traped(tracer_index) == 0) then   ! トラップされたトレーサーは移動しない
+      ! 除去対象のトレーサーはスキップ
+      ! TODO: ここのチェックは不要かもしれない
+      if (tracer%is_tracer_arrived(tracer_index) == 0) then
+        cycle
+      end if
 
-        ! フラグをリセット
-        is_tracer_movable = 1
-        is_tracer_traped = 0
-        is_tracer_invincibl = 0
+      ! トラップされたトレーサーは移動しない
+      if (tracer%is_tracer_trapped(tracer_index) == 1) then
+        ! 移動しないのでトレーサーの個数を更新して次のトレーサーへ
+        call update_tracer_count(tracer, tracer_index)
+        cycle
+      end if
 
-        !==========================================================================================
-        ! トレーサーの水深を調べる
-        !==========================================================================================
-        tracer_point_depth = &
+      !==========================================================================================
+      ! まずはトレーサーが動けるか、除去されるかをチェック
+      !==========================================================================================
+
+      ! フラグのリセット
+      tracer%is_tracer_movable(tracer_index) = 1
+
+      ! 水深と摩擦速度によるチェック
+      call check_tracer(tracer%Movable_Critical_depth, &
+                        tracer%Movable_Critical_u_star, &
+                        tracer%tracer_coordinate_xi(tracer_index), &
+                        tracer%tracer_coordinate_eta(tracer_index), &
+                        tracer%cell_index_i(tracer_index), &
+                        tracer%cell_index_j(tracer_index), &
+                        tracer%tracer_coordinate_xi_in_cell(tracer_index), &
+                        tracer%tracer_coordinate_eta_in_cell(tracer_index), &
+                        tracer%is_tracer_arrived(tracer_index), &
+                        tracer%is_tracer_movable(tracer_index))
+
+      ! 除去対象のトレーサーはスキップ
+      if (tracer%is_tracer_arrived(tracer_index) == 0) then
+        cycle
+      end if
+
+      ! 水深や摩擦速度が移動限界より小さい場合は移動しないし、トラップされない
+      ! 移動しないのでトレーサーの個数を更新して次のトレーサーへ
+      if (tracer%is_tracer_movable(tracer_index) == 0) then
+        call update_tracer_count(tracer, tracer_index)
+        cycle
+      end if
+
+      !==========================================================================================
+      ! トラップによって動けなくなるかをチェック
+      !==========================================================================================
+      !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      ! トレーサーの水深を調べる
+      !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      tracer_point_depth = &
+        calculate_scalar_at_tracer_position( &
+        depth_node, &
+        tracer%cell_index_i(tracer_index), &
+        tracer%cell_index_j(tracer_index), &
+        tracer%tracer_coordinate_xi_in_cell(tracer_index), &
+        tracer%tracer_coordinate_eta_in_cell(tracer_index))
+
+      ! 無敵ではないトラップセルにある動けるトレーサーを対象にする
+      if (trap_cell(tracer%cell_index_i(tracer_index), tracer%cell_index_j(tracer_index)) == 1 .and. tracer%is_tracer_movable(tracer_index) == 1 .and. tracer%is_tracer_invincible(tracer_index) == 0) then
+
+        !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        ! 捕獲率の計算
+        !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+        ! トラップの高さが水深より大きい場合
+        if (tracer%trap_wall_height > tracer_point_depth) then
+
+          ! 捕獲率は入力値のまま
+          tracer_point_trap_rate = tracer%trap_rate
+
+        else  ! トラップの高さが水深より小さい場合
+
+          ! 捕獲率は浸水分の高さの割合が反映される
+          tracer_point_trap_rate = tracer%trap_wall_height/tracer_point_depth*tracer%trap_rate
+
+        end if
+
+        !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        ! 捕獲の判定値の乱数を発生
+        !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        trap_decision_value = drand(0)*100
+
+        !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        ! 捕獲の判定
+        ! 判定値が捕獲率よりも小さい場合捕獲される
+        ! なお、トラップで動かなくなった場合は除去されない
+        !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+        if (tracer_point_trap_rate > trap_decision_value) then
+          ! トラップされて二度と動かなくなる
+          tracer%is_tracer_trapped(tracer_index) = 1
+          tracer%is_tracer_movable(tracer_index) = 0
+        else
+          tracer%is_tracer_invincible(tracer_index) = 1
+        end if
+
+      end if
+
+      ! トラップされたトレーサーは移動しない
+      if (tracer%is_tracer_trapped(tracer_index) == 1) then
+        ! 移動しないのでトレーサーの個数を更新して次のトレーサーへ
+        call update_tracer_count(tracer, tracer_index)
+        cycle
+      end if
+
+      !==========================================================================================
+      ! この時点で動けるトレーサーは移動を行う
+      !==========================================================================================
+      if (tracer%is_tracer_movable(tracer_index) == 1) then
+
+        !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        ! トレーサー地点の流速を計算
+        !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        tracer_point_velocity_xi = &
           calculate_scalar_at_tracer_position( &
-          depth_node, &
+          velocity_xi_node, &
           tracer%cell_index_i(tracer_index), &
           tracer%cell_index_j(tracer_index), &
           tracer%tracer_coordinate_xi_in_cell(tracer_index), &
           tracer%tracer_coordinate_eta_in_cell(tracer_index))
 
-        !==========================================================================================
-        ! まずはトレーサーが動けるか、除去されるかをチェック
-        !==========================================================================================
-        call check_tracer(tracer, &
-                          tracer%tracer_coordinate_xi(tracer_index), &
-                          tracer%tracer_coordinate_eta(tracer_index), &
-                          tracer%cell_index_i(tracer_index), &
-                          tracer%cell_index_j(tracer_index), &
-                          tracer%tracer_coordinate_xi_in_cell(tracer_index), &
-                          tracer%tracer_coordinate_eta_in_cell(tracer_index), &
-                          is_alive_tracer, &
-                          is_tracer_movable)
+        tracer_point_velocity_eta = &
+          calculate_scalar_at_tracer_position( &
+          velocity_eta_node, &
+          tracer%cell_index_i(tracer_index), &
+          tracer%cell_index_j(tracer_index), &
+          tracer%tracer_coordinate_xi_in_cell(tracer_index), &
+          tracer%tracer_coordinate_eta_in_cell(tracer_index))
 
         !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-        ! トラップによって動けなくなるかをチェック
+        ! ランダムウォークを考慮
         !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-        ! 無敵ではないトラップセルにある動けるトレーサーを対象にする
-        if (trap_cell(tracer%cell_index_i(tracer_index), tracer%cell_index_j(tracer_index)) == 1 .and. is_tracer_movable == 1 .and. tracer%is_tracer_invincibl(tracer_index) == 0) then
+        ! トレーサー地点の渦動粘性係数を計算
+        tracer_point_eddy_viscosity_coefficient = &
+          calculate_scalar_at_tracer_position( &
+          eddy_viscosity_coefficient_node, &
+          tracer%cell_index_i(tracer_index), &
+          tracer%cell_index_j(tracer_index), &
+          tracer%tracer_coordinate_xi_in_cell(tracer_index), &
+          tracer%tracer_coordinate_eta_in_cell(tracer_index))
 
-          !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-          ! 捕獲率の計算
-          !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        ! ランダムウォークによる移動距離の標準偏差
+        diffusion_std_dev = sqrt(2*(a_diff*tracer_point_eddy_viscosity_coefficient + b_diff)*time_interval_for_tracking)
 
-          ! トラップの高さが水深より大きい場合
-          if (tracer%trap_wall_height > tracer_point_depth) then
+        ! 縦方向横方向の正規分布乱数を取得
+        call generate_box_muller_random(bm_standard_normal_cos, bm_standard_normal_sin)
 
-            ! 捕獲率は入力値のまま
-            tracer_point_trap_rate = tracer%trap_rate
+        ! トレーサー地点のスケーリング係数を計算
+        tracer_point_scale_factor_xi = (scale_factor_xi(tracer%cell_index_i(tracer_index), tracer%cell_index_j(tracer_index) + 1) &
+                                        *tracer%tracer_coordinate_eta_in_cell(tracer_index) &
+                                        + scale_factor_xi(tracer%cell_index_i(tracer_index), tracer%cell_index_j(tracer_index)) &
+                                        *(grid_interval_eta - tracer%tracer_coordinate_eta_in_cell(tracer_index))) &
+                                       /grid_interval_eta
+        tracer_point_scale_factor_eta = (scale_factor_eta(tracer%cell_index_i(tracer_index) + 1, tracer%cell_index_j(tracer_index)) &
+                                         *tracer%tracer_coordinate_xi_in_cell(tracer_index) &
+                                         + scale_factor_eta(tracer%cell_index_i(tracer_index), tracer%cell_index_j(tracer_index)) &
+                                         *(grid_interval_xi - tracer%tracer_coordinate_xi_in_cell(tracer_index)))/grid_interval_xi
 
-            ! トラップの高さが水深より小さい場合
-          else
+        !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        ! 移動後の座標を計算
+        !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        moved_position_xi = tracer%tracer_coordinate_xi(tracer_index) &
+                            + tracer_point_velocity_xi*time_interval_for_tracking &
+                            + bm_standard_normal_cos*diffusion_std_dev*tracer_point_scale_factor_xi
 
-            ! 捕獲率は浸水分の高さの割合が反映される
-            tracer_point_trap_rate = tracer%trap_wall_height/tracer_point_depth*tracer%trap_rate
+        moved_position_eta = tracer%tracer_coordinate_eta(tracer_index) &
+                             + tracer_point_velocity_eta*time_interval_for_tracking &
+                             + bm_standard_normal_sin*diffusion_std_dev*tracer_point_scale_factor_eta
 
+        !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        ! 側面の壁では反射する
+        !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        if (moved_position_eta >= 1.) moved_position_eta = 1.-(moved_position_eta - 1.)
+        if (moved_position_eta <= 0.) moved_position_eta = -moved_position_eta
+
+        !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        ! 上下流端の周期境界条件による判定
+        !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        if (is_periodic_boundary_condition_Tracers == 1) then
+          ! 周期境界条件の場合は範囲外のトレーサーを移動
+          if (moved_position_xi > 1.0) moved_position_xi = moved_position_xi - 1.
+          if (moved_position_xi < 0.0) moved_position_xi = moved_position_xi + 1.
+        else
+          ! 周期境界じゃない場合範囲外のトレーサーは除去
+          if (moved_position_xi < 0.0 .or. 1.0 + tolerance < moved_position_xi) then
+            tracer%is_tracer_arrived(tracer_index) = 0
+            cycle
           end if
-
-          !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-          ! 捕獲の判定値の乱数を発生
-          !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-          trap_decision_value = drand(0)*100
-
-          !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-          ! 捕獲の判定
-          ! 判例地が捕獲率よりも小さい場合捕獲される
-          ! なお、トラップで動かなくなった場合は除去されない
-          !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-          if (tracer_point_trap_rate > trap_decision_value) then
-            ! トラップされて二度と動かなくなる
-            is_tracer_traped = 1
-            is_tracer_movable = 0
-          else
-            is_tracer_invincibl = 1
+          ! 精度の誤差によりちょっぴりはみ出ている場合は修正
+          if (1.0 < moved_position_xi .and. moved_position_xi < 1.0 + tolerance) then
+            moved_position_xi = 1.0
           end if
-
         end if
 
-        !==========================================================================================
-        ! この時点で動けるトレーサーは移動を行う
-        !==========================================================================================
-        if (is_tracer_movable == 1) then
+      end if
 
-          !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-          ! トレーサー地点の流速を計算
-          !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-          tracer_point_velocity_xi = &
-            calculate_scalar_at_tracer_position( &
-            velocity_xi_node, &
-            tracer%cell_index_i(tracer_index), &
-            tracer%cell_index_j(tracer_index), &
-            tracer%tracer_coordinate_xi_in_cell(tracer_index), &
-            tracer%tracer_coordinate_eta_in_cell(tracer_index))
+      !==========================================================================================
+      ! 除去対象ではないトレーサーであれば移動後の場所のチェック
+      !==========================================================================================
+      if (tracer%is_tracer_arrived(tracer_index) == 1) then
 
-          tracer_point_velocity_eta = &
-            calculate_scalar_at_tracer_position( &
-            velocity_eta_node, &
-            tracer%cell_index_i(tracer_index), &
-            tracer%cell_index_j(tracer_index), &
-            tracer%tracer_coordinate_xi_in_cell(tracer_index), &
-            tracer%tracer_coordinate_eta_in_cell(tracer_index))
+        !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        ! 移動処理後の場所について調べる
+        !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-          !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-          ! ランダムウォークを考慮
-          !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        ! トレーサーが存在するセルのインデックスを取得
+        call find_tracer_cell_index( &
+          moved_position_xi, &
+          moved_position_eta, &
+          moved_position_i, &
+          moved_position_j, &
+          moved_position_xi_in_cell, &
+          moved_position_eta_in_cell)
 
-          ! トレーサー地点の渦動粘性係数を計算
-          tracer_point_eddy_viscosity_coefficient = &
-            calculate_scalar_at_tracer_position( &
-            eddy_viscosity_coefficient_node, &
-            tracer%cell_index_i(tracer_index), &
-            tracer%cell_index_j(tracer_index), &
-            tracer%tracer_coordinate_xi_in_cell(tracer_index), &
-            tracer%tracer_coordinate_eta_in_cell(tracer_index))
+        ! 移動後の場所の条件でチェック
+        call check_tracer(tracer%Movable_Critical_depth, &
+                          tracer%Movable_Critical_u_star, &
+                          moved_position_xi, &
+                          moved_position_eta, &
+                          moved_position_i, &
+                          moved_position_j, &
+                          moved_position_xi_in_cell, &
+                          moved_position_eta_in_cell, &
+                          tracer%is_tracer_arrived(tracer_index), &
+                          tracer%is_tracer_movable(tracer_index))
 
-          ! ランダムウォークによる移動距離の標準偏差
-          diffusion_std_dev = sqrt(2*(a_diff*tracer_point_eddy_viscosity_coefficient + b_diff)*time_interval_for_tracking)
-
-          ! 縦方向横方向の正規分布乱数を取得
-          call generate_box_muller_random(bm_standard_normal_cos, bm_standard_normal_sin)
-
-          ! トレーサー地点のスケーリング係数を計算
-          tracer_point_scale_factor_xi = (scale_factor_xi(tracer%cell_index_i(tracer_index), tracer%cell_index_j(tracer_index) + 1) &
-                                          *tracer%tracer_coordinate_eta_in_cell(tracer_index) &
-                                          + scale_factor_xi(tracer%cell_index_i(tracer_index), tracer%cell_index_j(tracer_index)) &
-                                          *(grid_interval_eta - tracer%tracer_coordinate_eta_in_cell(tracer_index))) &
-                                         /grid_interval_eta
-          tracer_point_scale_factor_eta = (scale_factor_eta(tracer%cell_index_i(tracer_index) + 1, tracer%cell_index_j(tracer_index)) &
-                                           *tracer%tracer_coordinate_xi_in_cell(tracer_index) &
-                                           + scale_factor_eta(tracer%cell_index_i(tracer_index), tracer%cell_index_j(tracer_index)) &
-                                           *(grid_interval_xi - tracer%tracer_coordinate_xi_in_cell(tracer_index)))/grid_interval_xi
-
-          !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-          ! 移動後の座標を計算
-          !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-          moved_position_xi = tracer%tracer_coordinate_xi(tracer_index) &
-                              + tracer_point_velocity_xi*time_interval_for_tracking &
-                              + bm_standard_normal_cos*diffusion_std_dev*tracer_point_scale_factor_xi
-
-          moved_position_eta = tracer%tracer_coordinate_eta(tracer_index) &
-                               + tracer_point_velocity_eta*time_interval_for_tracking &
-                               + bm_standard_normal_sin*diffusion_std_dev*tracer_point_scale_factor_eta
-
-          !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-          ! 側面の壁では反射する
-          !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-          if (moved_position_eta >= 1.) moved_position_eta = 1.-(moved_position_eta - 1.)
-          if (moved_position_eta <= 0.) moved_position_eta = -moved_position_eta
-
-          !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-          ! 周期境界条件による判定
-          !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-          if (is_periodic_boundary_condition_Tracers == 1) then
-            if (moved_position_xi > 1.0) moved_position_xi = moved_position_xi - 1.
-            if (moved_position_xi < 0.0) moved_position_xi = moved_position_xi + 1.
-          else
-            ! 周期境界じゃない場合範囲外のトレーサーは除去
-            if (moved_position_xi < 0.0 .or. 1.0 + tolerance < moved_position_xi) is_alive_tracer = 0
-            ! 精度の誤差によりちょっぴりはみ出ている場合は修正
-            if (1.0 < moved_position_xi .and. moved_position_xi < 1.0 + tolerance) moved_position_xi = 1.0
-          end if
-
+        ! 移動後のセルで最大数に達しているかチェック
+        if (tracer%tracer_number_in_cell(moved_position_i, moved_position_j) >= tracer%max_number_in_cell) then
+          tracer%is_tracer_arrived(tracer_index) = 0
+          cycle
         end if
 
-        !==========================================================================================
-        ! 除去対象ではないトレーサーであれば移動後の場所のチェック
-        !==========================================================================================
-        if (is_alive_tracer == 1) then
-
-          !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-          ! 移動処理後の場所について調べる
-          !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-          ! トレーサーが存在するセルのインデックスを取得
-          call find_tracer_cell_index(moved_position_xi, moved_position_eta, moved_position_i, moved_position_j, moved_position_xi_in_cell, moved_position_eta_in_cell)
-          ! 移動後の場所の条件でチェック
-          call check_tracer(tracer, moved_position_xi, moved_position_eta, moved_position_i, moved_position_j, moved_position_xi_in_cell, moved_position_eta_in_cell, is_alive_tracer, is_tracer_movable)
-          ! トレーサーがセルを移動していたら無敵状態解除
-          if (tracer%cell_index_i(tracer_index) /= moved_position_i .or. tracer%cell_index_j(tracer_index) /= moved_position_j) is_tracer_invincibl = 0
-
+        ! トレーサーがセルを移動していたら無敵状態解除
+        if (tracer%cell_index_i(tracer_index) /= moved_position_i .or. tracer%cell_index_j(tracer_index) /= moved_position_j) then
+          tracer%is_tracer_invincible(tracer_index) = 0
         end if
-
-      else
-
-        ! トラップされたトレーサーは移動しないのでそのままの座標をセット
-        moved_position_xi = tracer%tracer_coordinate_xi(tracer_index)
-        moved_position_eta = tracer%tracer_coordinate_eta(tracer_index)
-        moved_position_i = tracer%cell_index_i(tracer_index)
-        moved_position_j = tracer%cell_index_j(tracer_index)
-        moved_position_xi_in_cell = tracer%tracer_coordinate_xi_in_cell(tracer_index)
-        moved_position_eta_in_cell = tracer%tracer_coordinate_eta_in_cell(tracer_index)
-        is_tracer_movable = 0
-        is_tracer_traped = 1
-        is_tracer_invincibl = 0
 
       end if
 
       !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-      ! 除去されないトレーサーのみを仮配列に入力
+      ! 移動して、かつ除去されないトレーサーの処理
       !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-      if (is_alive_tracer == 1) then
+      if (tracer%is_tracer_arrived(tracer_index) == 1) then
+
+        ! トレーサーの座標を更新
+        tracer%tracer_coordinate_xi(tracer_index) = moved_position_xi
+        tracer%tracer_coordinate_eta(tracer_index) = moved_position_eta
+        tracer%cell_index_i(tracer_index) = moved_position_i
+        tracer%cell_index_j(tracer_index) = moved_position_j
+        tracer%tracer_coordinate_xi_in_cell(tracer_index) = moved_position_xi_in_cell
+        tracer%tracer_coordinate_eta_in_cell(tracer_index) = moved_position_eta_in_cell
 
         ! カウンターを更新
-        call increment_integer_value(tracer_tmp%total_tracer_number, 1)
-        call increment_integer_value(tracer_tmp%tracer_number_in_cell(moved_position_i, moved_position_j), 1)
-        call increment_real_value(tracer_tmp%Weighted_number_in_cell(moved_position_i, moved_position_j), tracer%tracer_weight(tracer_index))
-
-        ! トレーサーの状態を入力
-        tracer_tmp%tracer_coordinate_xi(tracer_tmp%total_tracer_number) = moved_position_xi
-        tracer_tmp%tracer_coordinate_eta(tracer_tmp%total_tracer_number) = moved_position_eta
-        tracer_tmp%cell_index_i(tracer_tmp%total_tracer_number) = moved_position_i
-        tracer_tmp%cell_index_j(tracer_tmp%total_tracer_number) = moved_position_j
-        tracer_tmp%tracer_coordinate_xi_in_cell(tracer_tmp%total_tracer_number) = moved_position_xi_in_cell
-        tracer_tmp%tracer_coordinate_eta_in_cell(tracer_tmp%total_tracer_number) = moved_position_eta_in_cell
-        tracer_tmp%tracer_weight(tracer_tmp%total_tracer_number) = tracer%tracer_weight(tracer_index)
-        tracer_tmp%tracer_generation(tracer_tmp%total_tracer_number) = tracer%tracer_generation(tracer_index)
-        tracer_tmp%is_tracer_movable(tracer_tmp%total_tracer_number) = is_tracer_movable
-        tracer_tmp%is_tracer_traped(tracer_tmp%total_tracer_number) = is_tracer_traped
-        tracer_tmp%is_tracer_invincibl(tracer_tmp%total_tracer_number) = is_tracer_invincibl
-
+        call update_tracer_count(tracer, tracer_index)
       end if
 
     end do
 
-    ! 仮配列を元の配列にコピー
-    ! これにより除外されるトレーサーがない配列に更新される
-    tracer%total_tracer_number = tracer_tmp%total_tracer_number
-    tracer%tracer_number_in_cell = tracer_tmp%tracer_number_in_cell
-    tracer%Weighted_number_in_cell = tracer_tmp%Weighted_number_in_cell
+    !==========================================================================================
+    ! 生き残るトレーサーのみを残す
+    !==========================================================================================
 
-    tracer%tracer_coordinate_xi = tracer_tmp%tracer_coordinate_xi
-    tracer%tracer_coordinate_eta = tracer_tmp%tracer_coordinate_eta
-    tracer%cell_index_i = tracer_tmp%cell_index_i
-    tracer%cell_index_j = tracer_tmp%cell_index_j
-    tracer%tracer_coordinate_xi_in_cell = tracer_tmp%tracer_coordinate_xi_in_cell
-    tracer%tracer_coordinate_eta_in_cell = tracer_tmp%tracer_coordinate_eta_in_cell
-    tracer%tracer_weight = tracer_tmp%tracer_weight
-    tracer%tracer_generation = tracer_tmp%tracer_generation
-    tracer%is_tracer_movable = tracer_tmp%is_tracer_movable
-    tracer%is_tracer_traped = tracer_tmp%is_tracer_traped
-    tracer%is_tracer_invincibl = tracer_tmp%is_tracer_invincibl
+    call remove_dead_tracer(tracer, total_tracer_number_before)
 
   end subroutine move_tracer
 
@@ -1047,7 +1034,7 @@ contains
       end if
 
       ! 動かないトレーサーは分裂しない
-      if (tracer%is_tracer_movable(tracer_index) == 0 .or. tracer%is_tracer_traped(tracer_index) == 1) then
+      if (tracer%is_tracer_movable(tracer_index) == 0 .or. tracer%is_tracer_trapped(tracer_index) == 1) then
         cycle ! 分裂しない場合は次のトレーサーへ
       end if
 
@@ -1083,8 +1070,9 @@ contains
       tracer%tracer_weight(tracer%total_tracer_number + cloning_counter) = tracer%tracer_weight(tracer_index)
       tracer%tracer_generation(tracer%total_tracer_number + cloning_counter) = tracer%tracer_generation(tracer_index)
       tracer%is_tracer_movable(tracer%total_tracer_number + cloning_counter) = tracer%is_tracer_movable(tracer_index)
-      tracer%is_tracer_traped(tracer%total_tracer_number + cloning_counter) = tracer%is_tracer_traped(tracer_index)
-      tracer%is_tracer_invincibl(tracer%total_tracer_number + cloning_counter) = tracer%is_tracer_invincibl(tracer_index)
+      tracer%is_tracer_trapped(tracer%total_tracer_number + cloning_counter) = 0
+      tracer%is_tracer_invincible(tracer%total_tracer_number + cloning_counter) = tracer%is_tracer_invincible(tracer_index)
+      tracer%is_tracer_arrived(tracer%total_tracer_number + cloning_counter) = 1
 
     end do
 
@@ -1155,7 +1143,8 @@ contains
         end if
 
         ! トレーサー位置の水深、摩擦速度、などのチェック
-        call check_tracer(tracer, &
+        call check_tracer(tracer%Movable_Critical_depth, &
+                          tracer%Movable_Critical_u_star, &
                           supply_position_xi, &
                           supply_position_eta, &
                           supply_position_i, &
@@ -1190,8 +1179,8 @@ contains
             tracer%tracer_weight(tracer%total_tracer_number) = 1.0
             tracer%tracer_generation(tracer%total_tracer_number) = 1
             tracer%is_tracer_movable(tracer%total_tracer_number) = is_tracer_movable
-            tracer%is_tracer_traped(tracer%total_tracer_number) = 0
-            tracer%is_tracer_invincibl(tracer%total_tracer_number) = 0
+            tracer%is_tracer_trapped(tracer%total_tracer_number) = 0
+            tracer%is_tracer_invincible(tracer%total_tracer_number) = 0
 
           end if
 
