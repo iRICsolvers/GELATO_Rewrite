@@ -1125,6 +1125,9 @@ contains
         ! セルに1つ以上トレーサーがある場合は次のセルへ
         if (tracer%tracer_number_in_cell(cell_index_i, cell_index_j) >= 1) cycle
 
+        ! 投入箇所が障害物セルかチェック
+        if (obstacle_cell(cell_index_i, cell_index_j) == 1) cycle
+
         ! インデックスセット
         supply_position_i = cell_index_i
         supply_position_j = cell_index_j
@@ -1136,11 +1139,6 @@ contains
         ! セル内の座標計算
         supply_position_xi_in_cell = grid_interval_xi/2
         supply_position_eta_in_cell = grid_interval_eta/2
-
-        ! 投入箇所が障害物セルかチェック
-        if (obstacle_cell(supply_position_i, supply_position_j) == 1) then
-          is_add_tracer = 0
-        end if
 
         ! トレーサー位置の水深、摩擦速度、などのチェック
         call check_tracer(tracer%Movable_Critical_depth, &
@@ -1154,35 +1152,34 @@ contains
                           is_add_tracer, &
                           is_tracer_movable)
 
-        if (is_add_tracer == 1) then
+        if (is_add_tracer == 0) cycle
 
-          ! 間引き処理のためのカウンターを更新
-          call increment_integer_value(add_counter, 1)
+        ! 間引き処理のためのカウンターを更新
+        call increment_integer_value(add_counter, 1)
 
-          if (add_counter >= tracer%cloning_reduction_factor) then
+        if (add_counter >= tracer%cloning_reduction_factor) then
 
-            ! カウンターをリセット
-            add_counter = 0
+          ! カウンターをリセット
+          add_counter = 0
 
-            ! カウンターを更新
-            call increment_integer_value(tracer%total_tracer_number, 1)
-            call increment_integer_value(tracer%tracer_number_in_cell(supply_position_i, supply_position_j), 1)
-            call increment_real_value(tracer%Weighted_number_in_cell(supply_position_i, supply_position_j), 1.0d0)
+          ! カウンターを更新
+          call increment_integer_value(tracer%total_tracer_number, 1)
+          call increment_integer_value(tracer%tracer_number_in_cell(supply_position_i, supply_position_j), 1)
+          call increment_real_value(tracer%Weighted_number_in_cell(supply_position_i, supply_position_j), 1.0d0)
 
-            ! トレーサーの状態を入力
-            tracer%tracer_coordinate_xi(tracer%total_tracer_number) = supply_position_xi
-            tracer%tracer_coordinate_eta(tracer%total_tracer_number) = supply_position_eta
-            tracer%cell_index_i(tracer%total_tracer_number) = supply_position_i
-            tracer%cell_index_j(tracer%total_tracer_number) = supply_position_j
-            tracer%tracer_coordinate_xi_in_cell(tracer%total_tracer_number) = supply_position_xi_in_cell
-            tracer%tracer_coordinate_eta_in_cell(tracer%total_tracer_number) = supply_position_eta_in_cell
-            tracer%tracer_weight(tracer%total_tracer_number) = 1.0
-            tracer%tracer_generation(tracer%total_tracer_number) = 1
-            tracer%is_tracer_movable(tracer%total_tracer_number) = is_tracer_movable
-            tracer%is_tracer_trapped(tracer%total_tracer_number) = 0
-            tracer%is_tracer_invincible(tracer%total_tracer_number) = 0
-
-          end if
+          ! トレーサーの状態を入力
+          tracer%tracer_coordinate_xi(tracer%total_tracer_number) = supply_position_xi
+          tracer%tracer_coordinate_eta(tracer%total_tracer_number) = supply_position_eta
+          tracer%cell_index_i(tracer%total_tracer_number) = supply_position_i
+          tracer%cell_index_j(tracer%total_tracer_number) = supply_position_j
+          tracer%tracer_coordinate_xi_in_cell(tracer%total_tracer_number) = supply_position_xi_in_cell
+          tracer%tracer_coordinate_eta_in_cell(tracer%total_tracer_number) = supply_position_eta_in_cell
+          tracer%tracer_weight(tracer%total_tracer_number) = 1.0
+          tracer%tracer_generation(tracer%total_tracer_number) = 1
+          tracer%is_tracer_movable(tracer%total_tracer_number) = is_tracer_movable
+          tracer%is_tracer_trapped(tracer%total_tracer_number) = 0
+          tracer%is_tracer_invincible(tracer%total_tracer_number) = 0
+          tracer%is_tracer_arrived(tracer%total_tracer_number) = 1
 
         end if
 
