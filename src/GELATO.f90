@@ -320,6 +320,12 @@ program gelate
           if (primary%cloning_option == 1 .or. primary%cloning_option == 2) call clone_tracer(primary)
 
         end if
+        if (is_trace_secondary == 1 .and. secondary%is_tracer_cloning == 1) then
+
+          if (secondary%cloning_option == 0) call add_all_empty_cells(secondary)
+          if (secondary%cloning_option == 1 .or. secondary%cloning_option == 2) call clone_tracer(secondary)
+
+        end if
 
         !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         ! トレーサー数の統計を計算
