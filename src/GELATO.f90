@@ -309,6 +309,8 @@ program gelate
             time_counter_add_normal_tracer = 0.0
           end if
 
+        end do !time_step_trace = 1, tracking_count
+
           !------------------------------------------------------------------------------------------
           ! トレーサーのクローン
           !------------------------------------------------------------------------------------------
@@ -318,8 +320,6 @@ program gelate
             if (primary%cloning_option == 1 .or. primary%cloning_option == 2) call clone_tracer(primary)
 
           end if
-
-        end do !time_step_trace = 1, tracking_count
 
         !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         ! トレーサー数の統計を計算
