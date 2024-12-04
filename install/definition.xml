@@ -600,6 +600,39 @@
 				</Definition>
 			</Item>
 
+			<!-- 移動限界水深 -->
+			<Item name="Movable_Critical_depth_trajectory" caption="Critical depth for tracer moving(m)">
+				<Definition valueType="real" default="0.003" min="0.0">
+					<Condition type="isEqual" target="is_trace_trajectory" value="1"/>
+				</Definition>
+			</Item>
+
+			<!-- 移動限界摩擦速度 -->
+			<Item name="Movable_Critical_u_star_trajectory" caption="Critical shear velocity below which the tracer stops(m/s)">
+				<Definition valueType="real" default="0.0">
+					<Condition type="isEqual" target="is_trace_trajectory" value="1"/>
+				</Definition>
+			</Item>
+
+			<!-- トレーサー補足壁の設定 -->
+			<GroupBox caption="Tracer capturing wall">
+
+				<!-- トレーサー補足壁の高さ -->
+				<Item name="trap_wall_height_trajectory" caption="Capturing wall height(m)">
+					<Definition valueType="real" default="0.0">
+						<Condition type="isEqual" target="is_trace_trajectory" value="1"/>
+					</Definition>
+				</Item>
+
+				<!-- トレーサー捕捉率 -->
+				<Item name="trap_rate_trajectory" caption="Capturing rate of the wall(%)">
+					<Definition valueType="real" default="0.0">
+						<Condition type="isEqual" target="is_trace_trajectory" value="1"/>
+					</Definition>
+				</Item>
+
+			</GroupBox>
+
 			<!-- トレーサー配置 -->
 			<GroupBox caption="Tracers Supply Range">
 
