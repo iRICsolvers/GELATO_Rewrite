@@ -606,14 +606,10 @@ contains
         call find_tracer_cell_index(supply_position_xi, supply_position_eta, supply_position_i, supply_position_j, supply_position_xi_in_cell, supply_position_eta_in_cell)
 
         ! 投入箇所が障害物セルかチェック
-        if (obstacle_cell(supply_position_i, supply_position_j) == 1) then
-          is_add_tracer = 0
-        end if
+        if (obstacle_cell(supply_position_i, supply_position_j) == 1) cycle
 
         ! 投入箇所セル内の格子の数が最大数に達しているかチェック
-        if (tracer%tracer_number_in_cell(supply_position_i, supply_position_j) >= tracer%max_number_in_cell) then
-          is_add_tracer = 0
-        end if
+        if (tracer%tracer_number_in_cell(supply_position_i, supply_position_j) >= tracer%max_number_in_cell) cycle
 
         ! 投入箇所の水深と摩擦速度を調べる
         call check_tracer(tracer%Movable_Critical_depth, &
@@ -627,11 +623,11 @@ contains
                           is_add_tracer, &
                           is_tracer_movable)
 
+        if (is_add_tracer == 0) cycle
         !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
         ! 投入箇所に問題がなければトレーサーを追加
         !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-        if (is_add_tracer == 1) then
-
+        
           ! カウンターを更新
           call increment_integer_value(added_tracer_number, 1)
           call increment_integer_value(tracer%total_tracer_number, 1)
@@ -653,8 +649,6 @@ contains
           tracer%is_tracer_arrived(tracer%total_tracer_number) = 1
 
           if (tracer%total_tracer_number >= tracer%max_number) return
-
-        end if
 
       end do
     end do
