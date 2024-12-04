@@ -5,6 +5,12 @@ module trace
 
   implicit none
 
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  !
+  ! 変数の宣言
+  !
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
   !******************************************************************************************
   ! 通常トレーサーについて
   !******************************************************************************************
@@ -169,155 +175,11 @@ module trace
 
 contains
 
-  !******************************************************************************************
-  !> @brief 通常トレーサーの初期化を行うサブルーチン
-  !******************************************************************************************
-  subroutine Initialize_Normal_Tracer()
-
-    !==========================================================================================
-    ! 共通条件
-    !==========================================================================================
-    call cg_iric_read_real(cgnsOut, "supply_time_start_normal_tracers", supply_time_start_normal_tracers, is_error)
-    call cg_iric_read_real(cgnsOut, "supply_time_end_normal_tracers", supply_time_end_normal_tracers, is_error)
-    call cg_iric_read_real(cgnsOut, "supply_time_interval_normal_tracers", supply_time_interval_normal_tracers, is_error)
-    call cg_iric_read_integer(cgnsOut, "is_periodic_boundary_condition_Tracers", is_periodic_boundary_condition_Tracers, is_error)
-    call cg_iric_read_integer(cgnsOut, "stopped_tracer_handling", stopped_tracer_handling, is_error)
-
-    !==========================================================================================
-    ! プライマリートレーサー
-    !==========================================================================================
-    if (is_trace_primary) call Initialize_Normal_Tracer_type("primary", primary)
-
-    !==========================================================================================
-    ! セカンダリートレーサー
-    !==========================================================================================
-    if (is_trace_secondary) call Initialize_Normal_Tracer_type("secondary", secondary)
-
-  end subroutine Initialize_Normal_Tracer
-
-  !******************************************************************************************
-  !> @brief 通常トレーサーの各タイプの初期化を行うサブルーチン
-  !> @brief トレーサーの設定値を外部ファイルから読み込み、メモリを確保して初期化を行う。
-  !> @param[in]  suffix  トレーサーのタイプを表す文字列（例: "primary", "secondary"）
-  !> @param[inout] tracer  初期化されるトレーサー構造体 (normal_tracer型)
-  !******************************************************************************************
-  subroutine Initialize_Normal_Tracer_type(suffix, tracer)
-    character(len=*), intent(in) :: suffix
-    type(normal_tracer), intent(inout) :: tracer
-
-    call cg_iric_read_integer(cgnsOut, "max_number_"//trim(suffix), tracer%max_number, is_error)
-    call cg_iric_read_integer(cgnsOut, "max_number_in_cell_"//trim(suffix), tracer%max_number_in_cell, is_error)
-    call cg_iric_read_real(cgnsOut, "Movable_Critical_depth_"//trim(suffix), tracer%Movable_Critical_depth, is_error)
-    call cg_iric_read_real(cgnsOut, "Movable_Critical_u_star_"//trim(suffix), tracer%Movable_Critical_u_star, is_error)
-    call cg_iric_read_real(cgnsOut, "trap_wall_height_"//trim(suffix), tracer%trap_wall_height, is_error)
-    call cg_iric_read_real(cgnsOut, "trap_rate_"//trim(suffix), tracer%trap_rate, is_error)
-    call cg_iric_read_real(cgnsOut, "supply_position_xi_first_"//trim(suffix), tracer%supply_position_xi_first, is_error)
-    call cg_iric_read_real(cgnsOut, "supply_position_xi_end_"//trim(suffix), tracer%supply_position_xi_end, is_error)
-    call cg_iric_read_real(cgnsOut, "supply_interval_xi_"//trim(suffix), tracer%supply_interval_xi, is_error)
-    call cg_iric_read_real(cgnsOut, "supply_position_eta_first_"//trim(suffix), tracer%supply_position_eta_first, is_error)
-    call cg_iric_read_real(cgnsOut, "supply_position_eta_end_"//trim(suffix), tracer%supply_position_eta_end, is_error)
-    call cg_iric_read_real(cgnsOut, "supply_interval_eta_"//trim(suffix), tracer%supply_interval_eta, is_error)
-    call cg_iric_read_integer(cgnsOut, "is_tracer_cloning_"//trim(suffix), tracer%is_tracer_cloning, is_error)
-    call cg_iric_read_integer(cgnsOut, "cloning_option_"//trim(suffix), tracer%cloning_option, is_error)
-    call cg_iric_read_integer(cgnsOut, "max_generation_"//trim(suffix), tracer%max_generation, is_error)
-    call cg_iric_read_integer(cgnsOut, "cloning_reduction_factor_"//trim(suffix), tracer%cloning_reduction_factor, is_error)
-
-    allocate (tracer%tracer_coordinate_xi(tracer%max_number))
-    allocate (tracer%tracer_coordinate_eta(tracer%max_number))
-    allocate (tracer%cell_index_i(tracer%max_number))
-    allocate (tracer%cell_index_j(tracer%max_number))
-    allocate (tracer%tracer_coordinate_xi_in_cell(tracer%max_number))
-    allocate (tracer%tracer_coordinate_eta_in_cell(tracer%max_number))
-    allocate (tracer%tracer_weight(tracer%max_number))
-    allocate (tracer%tracer_generation(tracer%max_number))
-    allocate (tracer%is_tracer_movable(tracer%max_number))
-    allocate (tracer%is_tracer_trapped(tracer%max_number))
-    allocate (tracer%is_tracer_invincible(tracer%max_number))
-    allocate (tracer%is_tracer_arrived(tracer%max_number))
-
-    allocate (tracer%tracer_number_in_cell(cell_count_i, cell_count_j))
-    allocate (tracer%Weighted_number_in_cell(cell_count_i, cell_count_j))
-    allocate (tracer%total_tracer_number_in_cross_section(cell_count_i, cell_count_j))
-    allocate (tracer%averaged_tracer_number_in_cross_section(cell_count_i, cell_count_j))
-    allocate (tracer%time_integrated_tracer_number_in_cell(cell_count_i, cell_count_j))
-    allocate (tracer%time_averaged_tracer_number_in_cell(cell_count_i, cell_count_j))
-
-    tracer%tracer_coordinate_xi = 0.0
-    tracer%tracer_coordinate_eta = 0.0
-    tracer%cell_index_i = 0
-    tracer%cell_index_j = 0
-    tracer%tracer_coordinate_xi_in_cell = 0.0
-    tracer%tracer_coordinate_eta_in_cell = 0.0
-    tracer%tracer_weight = 0.0
-    tracer%tracer_generation = 0
-    tracer%is_tracer_movable = 0
-    tracer%is_tracer_trapped = 0
-    tracer%is_tracer_invincible = 0
-    tracer%is_tracer_arrived = 0
-
-    tracer%total_tracer_number = 0
-
-    tracer%tracer_number_in_cell = 0
-    tracer%Weighted_number_in_cell = 0.0
-    tracer%total_tracer_number_in_cross_section = 0
-    tracer%averaged_tracer_number_in_cross_section = 0.0
-    tracer%time_integrated_tracer_number_in_cell = 0.0
-    tracer%time_averaged_tracer_number_in_cell = 0.0
-
-  end subroutine Initialize_Normal_Tracer_type
-
-  !******************************************************************************************
-  !> @brief 軌跡追跡トレーサーの初期化を行うサブルーチン
-  !******************************************************************************************
-  subroutine Initialize_Trajectory_Tracer()
-
-    !==========================================================================================
-    ! 軌跡追跡トレーサー
-    !==========================================================================================
-    call cg_iric_read_integer(cgnsOut, "max_number_trajectory", trajectory%max_number, is_error)
-    call cg_iric_read_integer(cgnsOut, "max_save_times_trajectory", trajectory%max_save_times, is_error)
-    call cg_iric_read_integer(cgnsOut, "save_interval_trajectory", trajectory%save_interval, is_error)
-    call cg_iric_read_real(cgnsOut, "movable_critical_depth_trajectory", trajectory%Movable_Critical_depth, is_error)
-    call cg_iric_read_real(cgnsOut, "movable_critical_u_star_trajectory", trajectory%Movable_Critical_u_star, is_error)
-    call cg_iric_read_real(cgnsOut, "trap_wall_height_trajectory", trajectory%trap_wall_height, is_error)
-    call cg_iric_read_real(cgnsOut, "trap_rate_trajectory", trajectory%trap_rate, is_error)
-    call cg_iric_read_real(cgnsOut, "supply_time_trajectory", trajectory%supply_time, is_error)
-    call cg_iric_read_real(cgnsOut, "supply_position_xi_first_trajectory", trajectory%supply_position_xi_first, is_error)
-    call cg_iric_read_real(cgnsOut, "supply_position_xi_end_trajectory", trajectory%supply_position_xi_end, is_error)
-    call cg_iric_read_real(cgnsOut, "supply_interval_xi_trajectory", trajectory%supply_interval_xi, is_error)
-    call cg_iric_read_real(cgnsOut, "supply_position_eta_first_trajectory", trajectory%supply_position_eta_first, is_error)
-    call cg_iric_read_real(cgnsOut, "supply_position_eta_end_trajectory", trajectory%supply_position_eta_end, is_error)
-    call cg_iric_read_real(cgnsOut, "supply_interval_eta_trajectory", trajectory%supply_interval_eta, is_error)
-
-    allocate (trajectory%tracer_coordinate_xi(trajectory%max_number))
-    allocate (trajectory%tracer_coordinate_eta(trajectory%max_number))
-    allocate (trajectory%cell_index_i(trajectory%max_number))
-    allocate (trajectory%cell_index_j(trajectory%max_number))
-    allocate (trajectory%tracer_coordinate_xi_in_cell(trajectory%max_number))
-    allocate (trajectory%tracer_coordinate_eta_in_cell(trajectory%max_number))
-    ! fortranは列優先なので、次元の順番を逆にしている
-    allocate (trajectory%trajectory_coordinate_xi(trajectory%max_save_times, trajectory%max_number))
-    allocate (trajectory%trajectory_coordinate_eta(trajectory%max_save_times, trajectory%max_number))
-    allocate (trajectory%is_tracer_movable(trajectory%max_number))
-    allocate (trajectory%is_tracer_trapped(trajectory%max_number))
-    allocate (trajectory%is_tracer_invincible(trajectory%max_number))
-    allocate (trajectory%is_tracer_arrived(trajectory%max_number))
-
-    trajectory%tracer_coordinate_xi = 0.0
-    trajectory%tracer_coordinate_eta = 0.0
-    trajectory%cell_index_i = 0
-    trajectory%cell_index_j = 0
-    trajectory%tracer_coordinate_xi_in_cell = 0.0
-    trajectory%tracer_coordinate_eta_in_cell = 0.0
-    trajectory%trajectory_coordinate_xi = 0.0
-    trajectory%trajectory_coordinate_eta = 0.0
-    trajectory%is_tracer_movable = 0
-    trajectory%is_tracer_trapped = 0
-    trajectory%is_tracer_invincible = 0
-    trajectory%is_tracer_arrived = 0
-    trajectory%total_tracer_number = 0
-
-  end subroutine Initialize_Trajectory_Tracer
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  !
+  ! 汎用的なサブルーチン
+  !
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
   !******************************************************************************************
   !> @brief トレーサーが位置するセルのインデックスを探査してセル内での座標も計算する
@@ -560,63 +422,108 @@ contains
 
   end subroutine check_tracer
 
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  !
+  ! 通常トレーサーのサブルーチン
+  !
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
   !******************************************************************************************
-  !> @brief 生きているトレーサーだけを残すサブルーチン
-  !> @param[inout] tracer  トレーサーの位置、速度、重み、世代などの情報を含む構造体
-  !> @param[in] total_tracer_number_before  削除する前のトレーサーの総数
+  !> @brief 通常トレーサーの初期化を行うサブルーチン
   !******************************************************************************************
-  subroutine remove_dead_tracer(tracer, total_tracer_number_before)
-    implicit none
-    !> トレーサーの位置、速度、重み、世代などの情報を含む構造体
+  subroutine Initialize_Normal_Tracer()
+
+    !==========================================================================================
+    ! 共通条件
+    !==========================================================================================
+    call cg_iric_read_real(cgnsOut, "supply_time_start_normal_tracers", supply_time_start_normal_tracers, is_error)
+    call cg_iric_read_real(cgnsOut, "supply_time_end_normal_tracers", supply_time_end_normal_tracers, is_error)
+    call cg_iric_read_real(cgnsOut, "supply_time_interval_normal_tracers", supply_time_interval_normal_tracers, is_error)
+    call cg_iric_read_integer(cgnsOut, "is_periodic_boundary_condition_Tracers", is_periodic_boundary_condition_Tracers, is_error)
+    call cg_iric_read_integer(cgnsOut, "stopped_tracer_handling", stopped_tracer_handling, is_error)
+
+    !==========================================================================================
+    ! プライマリートレーサー
+    !==========================================================================================
+    if (is_trace_primary) call Initialize_Normal_Tracer_type("primary", primary)
+
+    !==========================================================================================
+    ! セカンダリートレーサー
+    !==========================================================================================
+    if (is_trace_secondary) call Initialize_Normal_Tracer_type("secondary", secondary)
+
+  end subroutine Initialize_Normal_Tracer
+
+  !******************************************************************************************
+  !> @brief 通常トレーサーの各タイプの初期化を行うサブルーチン
+  !> @brief トレーサーの設定値を外部ファイルから読み込み、メモリを確保して初期化を行う。
+  !> @param[in]  suffix  トレーサーのタイプを表す文字列（例: "primary", "secondary"）
+  !> @param[inout] tracer  初期化されるトレーサー構造体 (normal_tracer型)
+  !******************************************************************************************
+  subroutine Initialize_Normal_Tracer_type(suffix, tracer)
+    character(len=*), intent(in) :: suffix
     type(normal_tracer), intent(inout) :: tracer
-    !> 削除する前のトレーサーの総数
-    integer, intent(in) :: total_tracer_number_before
-    !> トレーサーのインデックス
-    integer :: tracer_index
-    !> 生存しているトレーサーのインデックス
-    integer :: alive_tracer_index
 
-    ! 生存しているトレーサーのインデックスを初期化
-    alive_tracer_index = 0
+    call cg_iric_read_integer(cgnsOut, "max_number_"//trim(suffix), tracer%max_number, is_error)
+    call cg_iric_read_integer(cgnsOut, "max_number_in_cell_"//trim(suffix), tracer%max_number_in_cell, is_error)
+    call cg_iric_read_real(cgnsOut, "Movable_Critical_depth_"//trim(suffix), tracer%Movable_Critical_depth, is_error)
+    call cg_iric_read_real(cgnsOut, "Movable_Critical_u_star_"//trim(suffix), tracer%Movable_Critical_u_star, is_error)
+    call cg_iric_read_real(cgnsOut, "trap_wall_height_"//trim(suffix), tracer%trap_wall_height, is_error)
+    call cg_iric_read_real(cgnsOut, "trap_rate_"//trim(suffix), tracer%trap_rate, is_error)
+    call cg_iric_read_real(cgnsOut, "supply_position_xi_first_"//trim(suffix), tracer%supply_position_xi_first, is_error)
+    call cg_iric_read_real(cgnsOut, "supply_position_xi_end_"//trim(suffix), tracer%supply_position_xi_end, is_error)
+    call cg_iric_read_real(cgnsOut, "supply_interval_xi_"//trim(suffix), tracer%supply_interval_xi, is_error)
+    call cg_iric_read_real(cgnsOut, "supply_position_eta_first_"//trim(suffix), tracer%supply_position_eta_first, is_error)
+    call cg_iric_read_real(cgnsOut, "supply_position_eta_end_"//trim(suffix), tracer%supply_position_eta_end, is_error)
+    call cg_iric_read_real(cgnsOut, "supply_interval_eta_"//trim(suffix), tracer%supply_interval_eta, is_error)
+    call cg_iric_read_integer(cgnsOut, "is_tracer_cloning_"//trim(suffix), tracer%is_tracer_cloning, is_error)
+    call cg_iric_read_integer(cgnsOut, "cloning_option_"//trim(suffix), tracer%cloning_option, is_error)
+    call cg_iric_read_integer(cgnsOut, "max_generation_"//trim(suffix), tracer%max_generation, is_error)
+    call cg_iric_read_integer(cgnsOut, "cloning_reduction_factor_"//trim(suffix), tracer%cloning_reduction_factor, is_error)
 
-    ! 全てのトレーサーをループして生存しているものを見つける
-    do tracer_index = 1, total_tracer_number_before
-      if (tracer%is_tracer_arrived(tracer_index) == 1) then
-        ! 生存しているトレーサーのインデックスを増加
-        alive_tracer_index = alive_tracer_index + 1
-        ! 生存しているトレーサーのプロパティを新しい位置にコピー
-        tracer%tracer_coordinate_xi(alive_tracer_index) = tracer%tracer_coordinate_xi(tracer_index)
-        tracer%tracer_coordinate_eta(alive_tracer_index) = tracer%tracer_coordinate_eta(tracer_index)
-        tracer%cell_index_i(alive_tracer_index) = tracer%cell_index_i(tracer_index)
-        tracer%cell_index_j(alive_tracer_index) = tracer%cell_index_j(tracer_index)
-        tracer%tracer_coordinate_xi_in_cell(alive_tracer_index) = tracer%tracer_coordinate_xi_in_cell(tracer_index)
-        tracer%tracer_coordinate_eta_in_cell(alive_tracer_index) = tracer%tracer_coordinate_eta_in_cell(tracer_index)
-        tracer%tracer_weight(alive_tracer_index) = tracer%tracer_weight(tracer_index)
-        tracer%tracer_generation(alive_tracer_index) = tracer%tracer_generation(tracer_index)
-        tracer%is_tracer_movable(alive_tracer_index) = tracer%is_tracer_movable(tracer_index)
-        tracer%is_tracer_trapped(alive_tracer_index) = tracer%is_tracer_trapped(tracer_index)
-        tracer%is_tracer_invincible(alive_tracer_index) = tracer%is_tracer_invincible(tracer_index)
-        tracer%is_tracer_arrived(alive_tracer_index) = tracer%is_tracer_arrived(tracer_index)
-      end if
-    end do
+    allocate (tracer%tracer_coordinate_xi(tracer%max_number))
+    allocate (tracer%tracer_coordinate_eta(tracer%max_number))
+    allocate (tracer%cell_index_i(tracer%max_number))
+    allocate (tracer%cell_index_j(tracer%max_number))
+    allocate (tracer%tracer_coordinate_xi_in_cell(tracer%max_number))
+    allocate (tracer%tracer_coordinate_eta_in_cell(tracer%max_number))
+    allocate (tracer%tracer_weight(tracer%max_number))
+    allocate (tracer%tracer_generation(tracer%max_number))
+    allocate (tracer%is_tracer_movable(tracer%max_number))
+    allocate (tracer%is_tracer_trapped(tracer%max_number))
+    allocate (tracer%is_tracer_invincible(tracer%max_number))
+    allocate (tracer%is_tracer_arrived(tracer%max_number))
 
-    ! 残りのトレーサーのプロパティをリセット
-    do tracer_index = alive_tracer_index + 1, total_tracer_number_before
-      tracer%tracer_coordinate_xi(tracer_index) = 0.0
-      tracer%tracer_coordinate_eta(tracer_index) = 0.0
-      tracer%cell_index_i(tracer_index) = 0
-      tracer%cell_index_j(tracer_index) = 0
-      tracer%tracer_coordinate_xi_in_cell(tracer_index) = 0.0
-      tracer%tracer_coordinate_eta_in_cell(tracer_index) = 0.0
-      tracer%tracer_weight(tracer_index) = 0.0
-      tracer%tracer_generation(tracer_index) = 0
-      tracer%is_tracer_movable(tracer_index) = 0
-      tracer%is_tracer_trapped(tracer_index) = 0
-      tracer%is_tracer_invincible(tracer_index) = 0
-      tracer%is_tracer_arrived(tracer_index) = 0
-    end do
+    allocate (tracer%tracer_number_in_cell(cell_count_i, cell_count_j))
+    allocate (tracer%Weighted_number_in_cell(cell_count_i, cell_count_j))
+    allocate (tracer%total_tracer_number_in_cross_section(cell_count_i, cell_count_j))
+    allocate (tracer%averaged_tracer_number_in_cross_section(cell_count_i, cell_count_j))
+    allocate (tracer%time_integrated_tracer_number_in_cell(cell_count_i, cell_count_j))
+    allocate (tracer%time_averaged_tracer_number_in_cell(cell_count_i, cell_count_j))
 
-  end subroutine remove_dead_tracer
+    tracer%tracer_coordinate_xi = 0.0
+    tracer%tracer_coordinate_eta = 0.0
+    tracer%cell_index_i = 0
+    tracer%cell_index_j = 0
+    tracer%tracer_coordinate_xi_in_cell = 0.0
+    tracer%tracer_coordinate_eta_in_cell = 0.0
+    tracer%tracer_weight = 0.0
+    tracer%tracer_generation = 0
+    tracer%is_tracer_movable = 0
+    tracer%is_tracer_trapped = 0
+    tracer%is_tracer_invincible = 0
+    tracer%is_tracer_arrived = 0
+
+    tracer%total_tracer_number = 0
+
+    tracer%tracer_number_in_cell = 0
+    tracer%Weighted_number_in_cell = 0.0
+    tracer%total_tracer_number_in_cross_section = 0
+    tracer%averaged_tracer_number_in_cross_section = 0.0
+    tracer%time_integrated_tracer_number_in_cell = 0.0
+    tracer%time_averaged_tracer_number_in_cell = 0.0
+
+  end subroutine Initialize_Normal_Tracer_type
 
   !******************************************************************************************
   !> @brief 通常トレーサーを追加する
@@ -1093,6 +1000,64 @@ contains
     call remove_dead_tracer(tracer, total_tracer_number_before)
 
   end subroutine move_normal_tracer
+
+  !******************************************************************************************
+  !> @brief 生きているトレーサーだけを残すサブルーチン
+  !> @param[inout] tracer  トレーサーの位置、速度、重み、世代などの情報を含む構造体
+  !> @param[in] total_tracer_number_before  削除する前のトレーサーの総数
+  !******************************************************************************************
+  subroutine remove_dead_tracer(tracer, total_tracer_number_before)
+    implicit none
+    !> トレーサーの位置、速度、重み、世代などの情報を含む構造体
+    type(normal_tracer), intent(inout) :: tracer
+    !> 削除する前のトレーサーの総数
+    integer, intent(in) :: total_tracer_number_before
+    !> トレーサーのインデックス
+    integer :: tracer_index
+    !> 生存しているトレーサーのインデックス
+    integer :: alive_tracer_index
+
+    ! 生存しているトレーサーのインデックスを初期化
+    alive_tracer_index = 0
+
+    ! 全てのトレーサーをループして生存しているものを見つける
+    do tracer_index = 1, total_tracer_number_before
+      if (tracer%is_tracer_arrived(tracer_index) == 1) then
+        ! 生存しているトレーサーのインデックスを増加
+        alive_tracer_index = alive_tracer_index + 1
+        ! 生存しているトレーサーのプロパティを新しい位置にコピー
+        tracer%tracer_coordinate_xi(alive_tracer_index) = tracer%tracer_coordinate_xi(tracer_index)
+        tracer%tracer_coordinate_eta(alive_tracer_index) = tracer%tracer_coordinate_eta(tracer_index)
+        tracer%cell_index_i(alive_tracer_index) = tracer%cell_index_i(tracer_index)
+        tracer%cell_index_j(alive_tracer_index) = tracer%cell_index_j(tracer_index)
+        tracer%tracer_coordinate_xi_in_cell(alive_tracer_index) = tracer%tracer_coordinate_xi_in_cell(tracer_index)
+        tracer%tracer_coordinate_eta_in_cell(alive_tracer_index) = tracer%tracer_coordinate_eta_in_cell(tracer_index)
+        tracer%tracer_weight(alive_tracer_index) = tracer%tracer_weight(tracer_index)
+        tracer%tracer_generation(alive_tracer_index) = tracer%tracer_generation(tracer_index)
+        tracer%is_tracer_movable(alive_tracer_index) = tracer%is_tracer_movable(tracer_index)
+        tracer%is_tracer_trapped(alive_tracer_index) = tracer%is_tracer_trapped(tracer_index)
+        tracer%is_tracer_invincible(alive_tracer_index) = tracer%is_tracer_invincible(tracer_index)
+        tracer%is_tracer_arrived(alive_tracer_index) = tracer%is_tracer_arrived(tracer_index)
+      end if
+    end do
+
+    ! 残りのトレーサーのプロパティをリセット
+    do tracer_index = alive_tracer_index + 1, total_tracer_number_before
+      tracer%tracer_coordinate_xi(tracer_index) = 0.0
+      tracer%tracer_coordinate_eta(tracer_index) = 0.0
+      tracer%cell_index_i(tracer_index) = 0
+      tracer%cell_index_j(tracer_index) = 0
+      tracer%tracer_coordinate_xi_in_cell(tracer_index) = 0.0
+      tracer%tracer_coordinate_eta_in_cell(tracer_index) = 0.0
+      tracer%tracer_weight(tracer_index) = 0.0
+      tracer%tracer_generation(tracer_index) = 0
+      tracer%is_tracer_movable(tracer_index) = 0
+      tracer%is_tracer_trapped(tracer_index) = 0
+      tracer%is_tracer_invincible(tracer_index) = 0
+      tracer%is_tracer_arrived(tracer_index) = 0
+    end do
+
+  end subroutine remove_dead_tracer
 
   !******************************************************************************************
   !> @brief トレーサーを分裂させる
