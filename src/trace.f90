@@ -22,19 +22,14 @@ module trace
   !> トレーサー追加のタイムカウンター
   double precision :: time_counter_add_normal_tracer
 
-  !> 通常トレーサーの構造体
-  type :: normal_tracer
+  type :: tracer_base
 
     !==========================================================================================
-    ! 通常トレーサー
+    ! トレーサーの共通パラメータ
     !==========================================================================================
-    !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    !------------------------------------------------------------------------------------------
     ! GUIから読み込む値
-    !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    !> 最大トレーサー数
-    integer:: max_number
-    !> セル内の最大トレーサー数
-    integer:: max_number_in_cell
+    !------------------------------------------------------------------------------------------
     !> 移動限界水深
     double precision:: Movable_Critical_depth
     !> 移動限界摩擦速度
@@ -56,19 +51,9 @@ module trace
     !> η方向配置間隔
     double precision:: supply_interval_eta
 
-    !> トレーサークローニングを行うか
-    integer:: is_tracer_cloning
-    !> クローニング手法 0:全ての空白セル 1:トレーサーが1つしかないセル 2:指定したセル
-    integer:: cloning_option
-    !> 最大分割回数
-    integer:: max_generation
-    !> すべての空白セルにトレーサーを発生させる場合の割引係数
-    integer:: cloning_reduction_factor
-
     !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     ! トレーサーの属性
     !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
     !> トレーサーのξ座標
     double precision, dimension(:), allocatable :: tracer_coordinate_xi
     !> トレーサーのη座標
@@ -81,10 +66,6 @@ module trace
     double precision, dimension(:), allocatable :: tracer_coordinate_xi_in_cell
     !> セル内でのトレーサーのη座標
     double precision, dimension(:), allocatable :: tracer_coordinate_eta_in_cell
-    !> トレーサーの重み
-    double precision, dimension(:), allocatable :: tracer_weight
-    !> トレーサーの世代
-    integer, dimension(:), allocatable :: tracer_generation
     !> トレーサーが動くことができるか
     integer, dimension(:), allocatable :: is_tracer_movable
     !> トレーサーがトラップにとらわれているか
@@ -93,6 +74,38 @@ module trace
     integer, dimension(:), allocatable :: is_tracer_invincible
     !> トレーサーが生き残るか
     integer, dimension(:), allocatable :: is_tracer_arrived
+
+  end type tracer_base
+
+  !> 通常トレーサーの構造体
+  type, extends(tracer_base) :: normal_tracer
+
+    !==========================================================================================
+    ! 通常トレーサー
+    !==========================================================================================
+    !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ! GUIから読み込む値
+    !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    !> 最大トレーサー数
+    integer:: max_number
+    !> セル内の最大トレーサー数
+    integer:: max_number_in_cell
+    !> トレーサークローニングを行うか
+    integer:: is_tracer_cloning
+    !> クローニング手法 0:全ての空白セル 1:トレーサーが1つしかないセル 2:指定したセル
+    integer:: cloning_option
+    !> 最大分割回数
+    integer:: max_generation
+    !> すべての空白セルにトレーサーを発生させる場合の割引係数
+    integer:: cloning_reduction_factor
+
+    !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ! トレーサーの属性
+    !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    !> トレーサーの重み
+    double precision, dimension(:), allocatable :: tracer_weight
+    !> トレーサーの世代
+    integer, dimension(:), allocatable :: tracer_generation
 
     !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     ! !トレーサー数の統計
@@ -123,12 +136,35 @@ module trace
   ! 軌跡追跡トレーサー
   !******************************************************************************************
 
-  !> 軌跡追跡トレーサーの最大数
-  integer :: max_number_trajectory
-  !> 軌跡の最大保存回数
-  integer :: max_save_times_trajectory
-  !> 軌跡の保存間隔
-  integer :: save_interval_trajectory
+  type, extends(tracer_base) :: trajectory_tracer
+
+    !==========================================================================================
+    ! 軌跡追跡トレーサー
+    !==========================================================================================
+    !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ! GUIから読み込む値
+    !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    !> 軌跡追跡トレーサーの最大数
+    integer:: max_number
+    !> 軌跡の最大保存回数
+    integer:: max_save_times
+    !> 軌跡の保存時間間隔
+    integer:: save_interval
+
+    !> 軌跡追跡トレーサーの追加時間
+    double precision :: supply_time_trajectory
+
+    !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ! トレーサーの属性
+    !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    !> 軌跡のξ座標
+    double precision, dimension(:, :), allocatable :: trajectory_coordinate_xi
+    !> 軌跡のη座標
+    double precision, dimension(:, :), allocatable :: trajectory_coordinate_eta
+
+  end type trajectory_tracer
+
+  type(trajectory_tracer) :: trajectory
 
 contains
 
