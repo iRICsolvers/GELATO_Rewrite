@@ -149,8 +149,8 @@ program gelate
   ! トレーサーの投入
   if ((supply_time_end_normal_tracers + tolerance >= time_trace .and. time_trace + tolerance >= supply_time_start_normal_tracers .and. time_counter_add_normal_tracer + tolerance >= supply_time_interval_normal_tracers)) then
 
-    if (is_trace_primary == 1) call add_tracer(primary)
-    if (is_trace_secondary == 1) call add_tracer(secondary)
+    if (is_trace_primary == 1) call add_normal_tracer(primary)
+    if (is_trace_secondary == 1) call add_normal_tracer(secondary)
 
     ! カウンターリセット
     time_counter_add_normal_tracer = 0
@@ -303,8 +303,8 @@ program gelate
           ! 通常トレーサーの投入
           !------------------------------------------------------------------------------------------
           if ((supply_time_end_normal_tracers + tolerance >= time_trace .and. time_trace + tolerance >= supply_time_start_normal_tracers .and. time_counter_add_normal_tracer + tolerance >= supply_time_interval_normal_tracers)) then
-            if (is_trace_primary == 1) call add_tracer(primary)
-            if (is_trace_secondary == 1) call add_tracer(secondary)
+            if (is_trace_primary == 1) call add_normal_tracer(primary)
+            if (is_trace_secondary == 1) call add_normal_tracer(secondary)
             ! カウンターリセット
             time_counter_add_normal_tracer = 0.0
           end if

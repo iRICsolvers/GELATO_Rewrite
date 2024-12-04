@@ -565,10 +565,10 @@ contains
   end subroutine remove_dead_tracer
 
   !******************************************************************************************
-  !> @brief トレーサーを追加する
+  !> @brief 通常トレーサーを追加する
   !> @param[inout] tracer  初期化されるトレーサー構造体 (normal_tracer型)
   !******************************************************************************************
-  subroutine add_tracer(tracer)
+  subroutine add_normal_tracer(tracer)
 
     type(normal_tracer), intent(inout) :: tracer
 
@@ -698,13 +698,13 @@ contains
       end do
     end do
 
-  end subroutine add_tracer
+  end subroutine add_normal_tracer
 
   !******************************************************************************************
-  !> @brief トレーサーを移動させる
+  !> @brief 通常トレーサーを移動させる
   !> @param[inout] tracer  移動するトレーサー構造体 (normal_tracer型)
   !******************************************************************************************
-  subroutine move_tracer(tracer)
+  subroutine move_normal_tracer(tracer)
     !> 移動するトレーサー構造体
     type(normal_tracer), intent(inout) :: tracer
     !> トレーサーのインデックス
@@ -1038,7 +1038,7 @@ contains
 
     call remove_dead_tracer(tracer, total_tracer_number_before)
 
-  end subroutine move_tracer
+  end subroutine move_normal_tracer
 
   !******************************************************************************************
   !> @brief トレーサーを分裂させる
