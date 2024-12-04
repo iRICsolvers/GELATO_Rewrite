@@ -95,6 +95,7 @@ program gelate
   !==========================================================================================
 
   if (is_trace_primary == 1 .or. is_trace_secondary == 1) call Initialize_Normal_Tracer()
+  if (is_trace_trajectory == 1) call Initialize_Trajectory_Tracer()
 
   !******************************************************************************************
   ! 初期状態の計算、アウトプット
@@ -296,8 +297,8 @@ program gelate
           !------------------------------------------------------------------------------------------
           ! トレーサーの追跡
           !------------------------------------------------------------------------------------------
-          if (is_trace_primary == 1 .and. primary%total_tracer_number > 0) call move_tracer(primary)
-          if (is_trace_secondary == 1 .and. secondary%total_tracer_number > 0) call move_tracer(secondary)
+          if (is_trace_primary == 1 .and. primary%total_tracer_number > 0) call move_normal_tracer(primary)
+          if (is_trace_secondary == 1 .and. secondary%total_tracer_number > 0) call move_normal_tracer(secondary)
 
           !------------------------------------------------------------------------------------------
           ! 通常トレーサーの投入

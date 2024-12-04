@@ -75,6 +75,9 @@ module trace
     !> トレーサーが生き残るか
     integer, dimension(:), allocatable :: is_tracer_arrived
 
+    !> トレーサーの総数
+    integer :: total_tracer_number
+
   end type tracer_base
 
   !> 通常トレーサーの構造体
@@ -110,8 +113,6 @@ module trace
     !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     ! !トレーサー数の統計
     !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    !> トレーサーの総数
-    integer :: total_tracer_number
     !> セル内のトレーサー総数
     integer, dimension(:, :), allocatable :: tracer_number_in_cell
     !>セル内の重み付きトレーサー数
@@ -152,7 +153,7 @@ module trace
     integer:: save_interval
 
     !> 軌跡追跡トレーサーの追加時間
-    double precision :: supply_time_trajectory
+    double precision :: supply_time
 
     !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     ! トレーサーの属性
@@ -264,6 +265,59 @@ contains
     tracer%time_averaged_tracer_number_in_cell = 0.0
 
   end subroutine Initialize_Normal_Tracer_type
+
+  !******************************************************************************************
+  !> @brief 軌跡追跡トレーサーの初期化を行うサブルーチン
+  !******************************************************************************************
+  subroutine Initialize_Trajectory_Tracer()
+
+    !==========================================================================================
+    ! 軌跡追跡トレーサー
+    !==========================================================================================
+    call cg_iric_read_integer(cgnsOut, "max_number_trajectory", trajectory%max_number, is_error)
+    call cg_iric_read_integer(cgnsOut, "max_save_times_trajectory", trajectory%max_save_times, is_error)
+    call cg_iric_read_integer(cgnsOut, "save_interval_trajectory", trajectory%save_interval, is_error)
+    call cg_iric_read_real(cgnsOut, "movable_critical_depth_trajectory", trajectory%Movable_Critical_depth, is_error)
+    call cg_iric_read_real(cgnsOut, "movable_critical_u_star_trajectory", trajectory%Movable_Critical_u_star, is_error)
+    call cg_iric_read_real(cgnsOut, "trap_wall_height_trajectory", trajectory%trap_wall_height, is_error)
+    call cg_iric_read_real(cgnsOut, "trap_rate_trajectory", trajectory%trap_rate, is_error)
+    call cg_iric_read_real(cgnsOut, "supply_time_trajectory", trajectory%supply_time, is_error)
+    call cg_iric_read_real(cgnsOut, "supply_position_xi_first_trajectory", trajectory%supply_position_xi_first, is_error)
+    call cg_iric_read_real(cgnsOut, "supply_position_xi_end_trajectory", trajectory%supply_position_xi_end, is_error)
+    call cg_iric_read_real(cgnsOut, "supply_interval_xi_trajectory", trajectory%supply_interval_xi, is_error)
+    call cg_iric_read_real(cgnsOut, "supply_position_eta_first_trajectory", trajectory%supply_position_eta_first, is_error)
+    call cg_iric_read_real(cgnsOut, "supply_position_eta_end_trajectory", trajectory%supply_position_eta_end, is_error)
+    call cg_iric_read_real(cgnsOut, "supply_interval_eta_trajectory", trajectory%supply_interval_eta, is_error)
+
+    allocate (trajectory%tracer_coordinate_xi(trajectory%max_number))
+    allocate (trajectory%tracer_coordinate_eta(trajectory%max_number))
+    allocate (trajectory%cell_index_i(trajectory%max_number))
+    allocate (trajectory%cell_index_j(trajectory%max_number))
+    allocate (trajectory%tracer_coordinate_xi_in_cell(trajectory%max_number))
+    allocate (trajectory%tracer_coordinate_eta_in_cell(trajectory%max_number))
+    ! fortranは列優先なので、次元の順番を逆にしている
+    allocate (trajectory%trajectory_coordinate_xi(trajectory%max_save_times, trajectory%max_number))
+    allocate (trajectory%trajectory_coordinate_eta(trajectory%max_save_times, trajectory%max_number))
+    allocate (trajectory%is_tracer_movable(trajectory%max_number))
+    allocate (trajectory%is_tracer_trapped(trajectory%max_number))
+    allocate (trajectory%is_tracer_invincible(trajectory%max_number))
+    allocate (trajectory%is_tracer_arrived(trajectory%max_number))
+
+    trajectory%tracer_coordinate_xi = 0.0
+    trajectory%tracer_coordinate_eta = 0.0
+    trajectory%cell_index_i = 0
+    trajectory%cell_index_j = 0
+    trajectory%tracer_coordinate_xi_in_cell = 0.0
+    trajectory%tracer_coordinate_eta_in_cell = 0.0
+    trajectory%trajectory_coordinate_xi = 0.0
+    trajectory%trajectory_coordinate_eta = 0.0
+    trajectory%is_tracer_movable = 0
+    trajectory%is_tracer_trapped = 0
+    trajectory%is_tracer_invincible = 0
+    trajectory%is_tracer_arrived = 0
+    trajectory%total_tracer_number = 0
+
+  end subroutine Initialize_Trajectory_Tracer
 
   !******************************************************************************************
   !> @brief トレーサーが位置するセルのインデックスを探査してセル内での座標も計算する
