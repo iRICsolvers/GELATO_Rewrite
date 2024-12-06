@@ -39,7 +39,7 @@
 
 			<!-- オリジナルの時刻を使用するか -->
 			<Item name="is_use_original_time" caption="Use original time">
-				<Definition valueType="integer" default="0" max="100"/>
+				<Definition valueType="integer" default="0" checkBox="true"/>
 			</Item>
 
 			<!-- センターラインの描画 -->
@@ -122,14 +122,19 @@
 						<!-- 流量を読み込むか -->
 						<Label col="0" caption="Load discharge" />
 						<Item col="1" name="is_load_discharge">
-							<Definition valueType="integer" default="0" checkBox="true"/>
+							<Definition valueType="integer" default="0" checkBox="true">
+								<Condition type="isEqual" target="flow_conditions_used_for_tracking" value="0" />
+							</Definition>
 						</Item>
 
 						<!-- 流量 -->
 						<Label col="2" caption="discharge name" />
 						<Item col="3" name="discharge_name">
 							<Definition valueType="result_baseIterativeReal" cgnsFile="inputfile">
-								<Condition type="isEqual" target="flow_conditions_used_for_tracking" value="0" />
+								<Condition type="and">
+									<Condition type="isEqual" target="flow_conditions_used_for_tracking" value="0" />
+									<Condition type="isEqual" target="is_load_discharge" value="1" />
+								</Condition>
 							</Definition>
 						</Item>
 					</HBoxLayout>
@@ -139,14 +144,19 @@
 						<!-- 河床変動量を読み込むか -->
 						<Label col="0" caption="Load elevation change" />
 						<Item col="1" name="is_load_elevation_change">
-							<Definition valueType="integer" default="0" checkBox="true"/>
+							<Definition valueType="integer" default="0" checkBox="true">
+								<Condition type="isEqual" target="flow_conditions_used_for_tracking" value="0" />
+							</Definition>
 						</Item>
 
 						<!-- 河床変動量 -->
 						<Label col="2" caption="Elevation change Name" />
 						<Item col="3" name="elevation_change_name">
 							<Definition valueType="result_gridNodeReal" cgnsFile="inputfile">
-								<Condition type="isEqual" target="flow_conditions_used_for_tracking" value="0" />
+								<Condition type="and">
+									<Condition type="isEqual" target="flow_conditions_used_for_tracking" value="0" />
+									<Condition type="isEqual" target="is_load_elevation_change" value="1" />
+								</Condition>
 							</Definition>
 						</Item>
 					</HBoxLayout>
@@ -156,14 +166,19 @@
 						<!-- 渦度を読み込むか -->
 						<Label col="0" caption="Load vorticity" />
 						<Item col="1" name="is_load_vorticity">
-							<Definition valueType="integer" default="0" checkBox="true"/>
+							<Definition valueType="integer" default="0" checkBox="true">
+								<Condition type="isEqual" target="flow_conditions_used_for_tracking" value="0" />
+							</Definition>
 						</Item>
 
 						<!-- 渦度 -->
 						<Label col="2" caption="Vorticity Name" />
 						<Item col="3" name="vorticity_name" >
 							<Definition valueType="result_gridNodeReal" cgnsFile="inputfile">
-								<Condition type="isEqual" target="flow_conditions_used_for_tracking" value="0" />
+								<Condition type="and">
+									<Condition type="isEqual" target="flow_conditions_used_for_tracking" value="0" />
+									<Condition type="isEqual" target="is_load_vorticity" value="1" />
+								</Condition>
 							</Definition>
 						</Item>
 
@@ -175,14 +190,19 @@
 						<!-- 渦度を読み込むか -->
 						<Label col="0" caption="Load dye concentration" />
 						<Item col="1" name="is_load_dye_concentration">
-							<Definition valueType="integer" default="0" checkBox="true"/>
+							<Definition valueType="integer" default="0" checkBox="true">
+								<Condition type="isEqual" target="flow_conditions_used_for_tracking" value="0" />
+							</Definition>
 						</Item>
 
 						<!-- 染料濃度 -->
 						<Label col="2" caption="dye concentration name" />
 						<Item col="3" name="dye_concentration_name" >
 							<Definition valueType="result_gridNodeReal" cgnsFile="inputfile">
-								<Condition type="isEqual" target="flow_conditions_used_for_tracking" value="0" />
+								<Condition type="and">
+									<Condition type="isEqual" target="flow_conditions_used_for_tracking" value="0" />
+									<Condition type="isEqual" target="is_load_dye_concentration" value="1" />
+								</Condition>
 							</Definition>
 						</Item>
 					</HBoxLayout>
@@ -599,6 +619,39 @@
 					<Condition type="isEqual" target="is_trace_trajectory" value="1"/>
 				</Definition>
 			</Item>
+
+			<!-- 移動限界水深 -->
+			<Item name="movable_critical_depth_trajectory" caption="Critical depth for tracer moving(m)">
+				<Definition valueType="real" default="0.003" min="0.0">
+					<Condition type="isEqual" target="is_trace_trajectory" value="1"/>
+				</Definition>
+			</Item>
+
+			<!-- 移動限界摩擦速度 -->
+			<Item name="movable_critical_u_star_trajectory" caption="Critical shear velocity below which the tracer stops(m/s)">
+				<Definition valueType="real" default="0.0">
+					<Condition type="isEqual" target="is_trace_trajectory" value="1"/>
+				</Definition>
+			</Item>
+
+			<!-- トレーサー補足壁の設定 -->
+			<GroupBox caption="Tracer capturing wall">
+
+				<!-- トレーサー補足壁の高さ -->
+				<Item name="trap_wall_height_trajectory" caption="Capturing wall height(m)">
+					<Definition valueType="real" default="0.0">
+						<Condition type="isEqual" target="is_trace_trajectory" value="1"/>
+					</Definition>
+				</Item>
+
+				<!-- トレーサー捕捉率 -->
+				<Item name="trap_rate_trajectory" caption="Capturing rate of the wall(%)">
+					<Definition valueType="real" default="0.0">
+						<Condition type="isEqual" target="is_trace_trajectory" value="1"/>
+					</Definition>
+				</Item>
+
+			</GroupBox>
 
 			<!-- トレーサー配置 -->
 			<GroupBox caption="Tracers Supply Range">
