@@ -590,6 +590,9 @@ contains
         ! 誤差範囲内なら誤差を補正
         if (supply_position_eta > tracer%supply_position_eta_end) supply_position_eta = tracer%supply_position_eta_end
 
+        ! 最大数に達していたら終了
+        if (tracer%total_tracer_number >= tracer%max_number) return
+
         !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
         ! 投入箇所に投入できるかチェック
         !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -642,8 +645,6 @@ contains
           tracer%is_tracer_trapped(tracer%total_tracer_number) = 0
           tracer%is_tracer_invincible(tracer%total_tracer_number) = 0
           tracer%is_tracer_arrived(tracer%total_tracer_number) = 1
-
-          if (tracer%total_tracer_number >= tracer%max_number) return
 
       end do
     end do
@@ -1066,6 +1067,11 @@ contains
     ! 各トレーサーについて
     !==========================================================================================
     do tracer_index = 1, tracer%total_tracer_number
+
+      !全体のセルの数が最大数に達している場合は分裂しないのでサブルーチンを抜ける
+      if (tracer%total_tracer_number + cloning_counter >= tracer%max_number) then
+        return
+      end if
 
       !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
       ! トレーサーの分裂条件をチェック
