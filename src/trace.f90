@@ -357,33 +357,33 @@ contains
   !> @brief トレーサー位置のスカラーから追加や移動をさせるかチェックする
   !> @param[in] movable_critical_depth 移動限界水深
   !> @param[in] movable_critical_u_star 移動限界摩擦速度
-  !> @param[in] tracer_position_xi トレーサーのξ方向座標
-  !> @param[in] tracer_position_eta トレーサーのη方向座標
-  !> @param[in] tracer_position_i 投入地点のセルインデックス
-  !> @param[in] tracer_position_j 投入地点のセルインデックス
-  !> @param[in] tracer_position_xi_in_cell セル内でのξ方向投入地点座標
-  !> @param[in] tracer_position_eta_in_cell セル内でのη方向投入地点座標
+  !> @param[in] tracer_coordinate_xi トレーサーのξ方向座標
+  !> @param[in] tracer_coordinate_eta トレーサーのη方向座標
+  !> @param[in] cell_index_i トレーサー位置のセルインデックス
+  !> @param[in] cell_index_j トレーサー位置のセルインデックス
+  !> @param[in] tracer_coordinate_xi_in_cell セル内でのξ方向投入地点座標
+  !> @param[in] tracer_coordinate_eta_in_cell セル内でのη方向投入地点座標
   !> @param[inout] is_add_tracer トレーサーの追加、除去の対象か
   !> @param[inout] is_tracer_movable トレーサーが動くか
   ! メモ：障害物に関するチェックは移動と追加で扱いが異なるのでこの中では行わない
   !******************************************************************************************
-  subroutine check_tracer(Movable_Critical_depth, Movable_Critical_u_star, tracer_position_xi, tracer_position_eta, tracer_position_i, tracer_position_j, tracer_position_xi_in_cell, tracer_position_eta_in_cell, is_add_tracer, is_tracer_movable)
+  subroutine check_tracer(Movable_Critical_depth, Movable_Critical_u_star, tracer_coordinate_xi, tracer_coordinate_eta, cell_index_i, cell_index_j, tracer_coordinate_xi_in_cell, tracer_coordinate_eta_in_cell, is_add_tracer, is_tracer_movable)
     !> 移動限界水深
     double precision :: Movable_Critical_depth
     !> 移動限界摩擦速度
     double precision :: Movable_Critical_u_star
     !> ξ方向トレーサー座標
-    double precision, intent(in) :: tracer_position_xi
+    double precision, intent(in) :: tracer_coordinate_xi
     !> η方向トレーサー座標
-    double precision, intent(in) :: tracer_position_eta
+    double precision, intent(in) :: tracer_coordinate_eta
     !> 投入地点のセルインデックス
-    integer, intent(in) :: tracer_position_i
+    integer, intent(in) :: cell_index_i
     !> 投入地点のセルインデックス
-    integer, intent(in) :: tracer_position_j
+    integer, intent(in) :: cell_index_j
     !> セル内での移動後のξ方向座標
-    double precision, intent(in) :: tracer_position_xi_in_cell
+    double precision, intent(in) :: tracer_coordinate_xi_in_cell
     !> セル内での移動後のη方向座標
-    double precision, intent(in) :: tracer_position_eta_in_cell
+    double precision, intent(in) :: tracer_coordinate_eta_in_cell
     !> 投入地点の水深
     double precision :: tracer_point_depth
     !> 投入地点の摩擦速度
@@ -396,15 +396,15 @@ contains
 
     ! 投入地点の水深と摩擦速度を調べる
     tracer_point_depth = calculate_scalar_at_tracer_position(depth_node, &
-                                                             tracer_position_i, &
-                                                             tracer_position_j, &
-                                                             tracer_position_xi_in_cell, &
-                                                             tracer_position_eta_in_cell)
+                                                             cell_index_i, &
+                                                             cell_index_j, &
+                                                             tracer_coordinate_xi_in_cell, &
+                                                             tracer_coordinate_eta_in_cell)
     tracer_point_u_star = calculate_scalar_at_tracer_position(u_star_node, &
-                                                              tracer_position_i, &
-                                                              tracer_position_j, &
-                                                              tracer_position_xi_in_cell, &
-                                                              tracer_position_eta_in_cell)
+                                                              cell_index_i, &
+                                                              cell_index_j, &
+                                                              tracer_coordinate_xi_in_cell, &
+                                                              tracer_coordinate_eta_in_cell)
 
     ! 投入箇所の水深が移動可能水深以上かつ停止したトレーサーを除去するかチェック
     if (Movable_Critical_depth > tracer_point_depth) then
@@ -634,25 +634,25 @@ contains
         !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
         ! 投入箇所に問題がなければトレーサーを追加
         !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-        
-          ! カウンターを更新
-          call increment_integer_value(tracer%total_tracer_number, 1)
-          call increment_integer_value(tracer%tracer_number_in_cell(supply_position_i, supply_position_j), 1)
-          call increment_real_value(tracer%Weighted_number_in_cell(supply_position_i, supply_position_j), 1.0d0)
 
-          ! トレーサーの状態を入力
-          tracer%tracer_coordinate_xi(tracer%total_tracer_number) = supply_position_xi
-          tracer%tracer_coordinate_eta(tracer%total_tracer_number) = supply_position_eta
-          tracer%cell_index_i(tracer%total_tracer_number) = supply_position_i
-          tracer%cell_index_j(tracer%total_tracer_number) = supply_position_j
-          tracer%tracer_coordinate_xi_in_cell(tracer%total_tracer_number) = supply_position_xi_in_cell
-          tracer%tracer_coordinate_eta_in_cell(tracer%total_tracer_number) = supply_position_eta_in_cell
-          tracer%tracer_weight(tracer%total_tracer_number) = 1.0
-          tracer%tracer_generation(tracer%total_tracer_number) = 1
-          tracer%is_tracer_movable(tracer%total_tracer_number) = is_tracer_movable
-          tracer%is_tracer_trapped(tracer%total_tracer_number) = 0
-          tracer%is_tracer_invincible(tracer%total_tracer_number) = 0
-          tracer%is_tracer_arrived(tracer%total_tracer_number) = 1
+        ! カウンターを更新
+        call increment_integer_value(tracer%total_tracer_number, 1)
+        call increment_integer_value(tracer%tracer_number_in_cell(supply_position_i, supply_position_j), 1)
+        call increment_real_value(tracer%Weighted_number_in_cell(supply_position_i, supply_position_j), 1.0d0)
+
+        ! トレーサーの状態を入力
+        tracer%tracer_coordinate_xi(tracer%total_tracer_number) = supply_position_xi
+        tracer%tracer_coordinate_eta(tracer%total_tracer_number) = supply_position_eta
+        tracer%cell_index_i(tracer%total_tracer_number) = supply_position_i
+        tracer%cell_index_j(tracer%total_tracer_number) = supply_position_j
+        tracer%tracer_coordinate_xi_in_cell(tracer%total_tracer_number) = supply_position_xi_in_cell
+        tracer%tracer_coordinate_eta_in_cell(tracer%total_tracer_number) = supply_position_eta_in_cell
+        tracer%tracer_weight(tracer%total_tracer_number) = 1.0
+        tracer%tracer_generation(tracer%total_tracer_number) = 1
+        tracer%is_tracer_movable(tracer%total_tracer_number) = is_tracer_movable
+        tracer%is_tracer_trapped(tracer%total_tracer_number) = 0
+        tracer%is_tracer_invincible(tracer%total_tracer_number) = 0
+        tracer%is_tracer_arrived(tracer%total_tracer_number) = 1
 
       end do
     end do
