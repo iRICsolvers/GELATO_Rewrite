@@ -95,6 +95,7 @@ program gelate
   !==========================================================================================
 
   if (is_trace_primary == 1 .or. is_trace_secondary == 1) call Initialize_Normal_Tracer()
+  if (is_trace_trajectory == 1) call Initialize_Trajectory_Tracer()
 
   !******************************************************************************************
   ! 初期状態の計算、アウトプット
@@ -149,12 +150,19 @@ program gelate
   ! トレーサーの投入
   if ((supply_time_end_normal_tracers + tolerance >= time_trace .and. time_trace + tolerance >= supply_time_start_normal_tracers .and. time_counter_add_normal_tracer + tolerance >= supply_time_interval_normal_tracers)) then
 
-    if (is_trace_primary == 1) call add_tracer(primary)
-    if (is_trace_secondary == 1) call add_tracer(secondary)
+    if (is_trace_primary == 1) call add_normal_tracer(primary)
+    if (is_trace_secondary == 1) call add_normal_tracer(secondary)
 
     ! カウンターリセット
     time_counter_add_normal_tracer = 0
 
+  end if
+
+  !==========================================================================================
+  ! 軌跡追跡トレーサーの初期散布（散布開始時間内であれば）
+  !==========================================================================================
+  if (is_trace_trajectory == 1 .and. trajectory%supply_time <= time_trace + tolerance) then
+    call add_trajectory_tracer(trajectory)
   end if
 
   !==========================================================================================
@@ -177,6 +185,8 @@ program gelate
   ! 通常トレーサの出力
   if (is_trace_primary == 1) call write_sol_normal_tracer("primary", primary)
   if (is_trace_secondary == 1) call write_sol_normal_tracer("secondary", secondary)
+  ! 軌跡追跡トレーサの出力
+  if (is_trace_trajectory == 1) call write_sol_trajectory_tracer(trajectory)
 
   call cg_iric_write_sol_end(cgnsOut, is_error)
 
@@ -282,7 +292,7 @@ program gelate
       if (is_trace_primary == 1 .or. is_trace_secondary == 1 .or. is_trace_trajectory == 1 .or. is_simulation_fish == 1) then
 
         !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        ! 移動、追加、クローニングの処理
+        ! 移動、追加
         !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         do time_step_trace = 1, tracking_count
 
@@ -296,17 +306,28 @@ program gelate
           !------------------------------------------------------------------------------------------
           ! トレーサーの追跡
           !------------------------------------------------------------------------------------------
-          if (is_trace_primary == 1 .and. primary%total_tracer_number > 0) call move_tracer(primary)
-          if (is_trace_secondary == 1 .and. secondary%total_tracer_number > 0) call move_tracer(secondary)
+          ! 通常トレーサーの移動
+          if (is_trace_primary == 1 .and. primary%total_tracer_number > 0) call move_normal_tracer(primary)
+          if (is_trace_secondary == 1 .and. secondary%total_tracer_number > 0) call move_normal_tracer(secondary)
+          ! 軌跡追跡トレーサーの移動
+          if (is_trace_trajectory == 1 .and. trajectory%total_tracer_number > 0) call move_trajectory_tracer(trajectory)
 
           !------------------------------------------------------------------------------------------
-          ! 通常トレーサーの投入
+          ! トレーサーの投入
           !------------------------------------------------------------------------------------------
+          ! 通常トレーサーの投入
           if ((supply_time_end_normal_tracers + tolerance >= time_trace .and. time_trace + tolerance >= supply_time_start_normal_tracers .and. time_counter_add_normal_tracer + tolerance >= supply_time_interval_normal_tracers)) then
-            if (is_trace_primary == 1) call add_tracer(primary)
-            if (is_trace_secondary == 1) call add_tracer(secondary)
+            if (is_trace_primary == 1 .and. primary%total_tracer_number < primary%max_number) call add_normal_tracer(primary)
+            if (is_trace_secondary == 1 .and. secondary%total_tracer_number < secondary%max_number) call add_normal_tracer(secondary)
             ! カウンターリセット
             time_counter_add_normal_tracer = 0.0
+          end if
+
+          ! 軌跡追跡トレーサーの投入
+          if (trajectory%is_added_trajectory_tracer == 0) then
+            if (trajectory%supply_time <= time_trace + tolerance) then
+              call add_trajectory_tracer(trajectory)
+            end if
           end if
 
         end do !time_step_trace = 1, tracking_count
@@ -314,13 +335,13 @@ program gelate
         !------------------------------------------------------------------------------------------
         ! トレーサーのクローン
         !------------------------------------------------------------------------------------------
-        if (is_trace_primary == 1 .and. primary%is_tracer_cloning == 1) then
+        if (is_trace_primary == 1 .and. primary%is_tracer_cloning == 1 .and. primary%total_tracer_number < primary%max_number) then
 
           if (primary%cloning_option == 0) call add_all_empty_cells(primary)
           if (primary%cloning_option == 1 .or. primary%cloning_option == 2) call clone_tracer(primary)
 
         end if
-        if (is_trace_secondary == 1 .and. secondary%is_tracer_cloning == 1) then
+        if (is_trace_secondary == 1 .and. secondary%is_tracer_cloning == 1 .and. secondary%total_tracer_number < secondary%max_number) then
 
           if (secondary%cloning_option == 0) call add_all_empty_cells(secondary)
           if (secondary%cloning_option == 1 .or. secondary%cloning_option == 2) call clone_tracer(secondary)
@@ -336,9 +357,11 @@ program gelate
         !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         ! トレーサーの出力
         !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
+        ! 通常トレーサの出力
         if (is_trace_primary == 1) call write_sol_normal_tracer("primary", primary)
         if (is_trace_secondary == 1) call write_sol_normal_tracer("secondary", secondary)
+        ! 軌跡追跡トレーサの出力
+        if (is_trace_trajectory == 1) call write_sol_trajectory_tracer(trajectory)
 
       end if
 
