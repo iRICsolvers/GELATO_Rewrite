@@ -533,8 +533,6 @@ contains
 
     type(normal_tracer), intent(inout) :: tracer
 
-    !> この投入で追加されるトレーサー数
-    integer :: added_tracer_number
     !> ξ方向投入地点座標
     double precision :: supply_position_xi
     !> η方向投入地点座標
@@ -561,8 +559,6 @@ contains
     integer :: supply_loop_index_xi
     !> 投入範囲ループのインデックス
     integer :: supply_loop_index_eta
-
-    added_tracer_number = 0
 
     !==========================================================================================
     ! 投入箇所ごとのループ
@@ -629,7 +625,6 @@ contains
         !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
         
           ! カウンターを更新
-          call increment_integer_value(added_tracer_number, 1)
           call increment_integer_value(tracer%total_tracer_number, 1)
           call increment_integer_value(tracer%tracer_number_in_cell(supply_position_i, supply_position_j), 1)
           call increment_real_value(tracer%Weighted_number_in_cell(supply_position_i, supply_position_j), 1.0d0)
