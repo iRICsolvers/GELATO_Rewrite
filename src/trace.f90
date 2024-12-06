@@ -592,7 +592,7 @@ contains
         ! 投入箇所を計算
         supply_position_eta = tracer%supply_position_eta_first + tracer%supply_interval_eta*supply_loop_index_eta
 
-        ! 誤差範囲内なら誤差を補正
+        ! 範囲外ならループ終了
         if (supply_position_eta > tracer%supply_position_eta_end + tolerance) exit
 
         ! 誤差範囲内なら誤差を補正
@@ -676,9 +676,9 @@ contains
     double precision :: moved_position_xi
     !> 移動後のη方向座標
     double precision :: moved_position_eta
-    !> セル内でのξ方向投入地点座標
+    !> 移動後のセル内でのξ方向座標
     double precision :: moved_position_xi_in_cell
-    !> セル内でのη方向投入地点座標
+    !> 移動後のセル内でのη方向座標
     double precision :: moved_position_eta_in_cell
     !> 移動後のセルのj方向インデックス
     integer :: moved_position_i

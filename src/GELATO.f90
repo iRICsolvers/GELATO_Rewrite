@@ -292,7 +292,7 @@ program gelate
       if (is_trace_primary == 1 .or. is_trace_secondary == 1 .or. is_trace_trajectory == 1 .or. is_simulation_fish == 1) then
 
         !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        ! 移動、追加、クローニングの処理
+        ! 移動、追加
         !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         do time_step_trace = 1, tracking_count
 
