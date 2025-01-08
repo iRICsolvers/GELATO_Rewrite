@@ -255,6 +255,13 @@ contains
     cell_index_i = int(tracer_coordinate_xi/grid_interval_xi) + 1
     cell_index_j = int(tracer_coordinate_eta/grid_interval_eta) + 1
 
+    ! 例外処理
+    ! grid_interval_xi, grid_interval_etaを求める際に誤差により1付近のトレーサーのインデックスが範囲外になることがある
+    ! そのため、インデックスが最大値を超えた場合のインデックスを修正する
+    ! これにより格子範囲外のトレーサーでも格子範囲内に収まることになってしまうが、トレーサーの移動の際に範囲外のトレーサーは除去されるため問題ない
+    if (cell_index_i > cell_count_i) cell_index_i = cell_count_i
+    if (cell_index_j > cell_count_j) cell_index_j = cell_count_j
+    ! 浮動小数点による誤差を考慮して、トレーサーが格子点の境界に位置する場合の処理
     if (abs(tracer_coordinate_xi - 1.0d0) < tolerance) cell_index_i = cell_count_i
     if (abs(tracer_coordinate_eta - 1.0d0) < tolerance) cell_index_j = cell_count_j
 
