@@ -50,7 +50,7 @@ module common
   !> 軌跡追跡トレーサーの追跡有無
   integer :: is_trace_trajectory
   !> ウィンドマップ風描画の有無
-  integer :: is_draw_wind_map
+  integer :: is_draw_windmap
   !> 魚のシミュレーションの有無
   integer :: is_simulation_fish
   !> 樹木の描写の有無
@@ -165,7 +165,7 @@ contains
     ! 軌跡追跡トレーサーを追跡するか
     call cg_iric_read_integer(cgnsOut, "is_trace_trajectory", is_trace_trajectory, is_error)
     ! ウィンドマップ風描画を行うか
-    call cg_iric_read_integer(cgnsOut, "is_draw_wind_map", is_draw_wind_map, is_error)
+    call cg_iric_read_integer(cgnsOut, "is_draw_windmap", is_draw_windmap, is_error)
     ! 魚のシミュレーションを行うか
     call cg_iric_read_integer(cgnsOut, "is_simulation_fish", is_simulation_fish, is_error)
     ! 樹木の描画を行うか

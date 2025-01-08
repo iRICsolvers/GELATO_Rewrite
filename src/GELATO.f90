@@ -91,11 +91,12 @@ program gelate
   call allocate_result_value()
 
   !==========================================================================================
-  ! 通常トレーサーの設定読み込み、初期化
+  ! トレーサー・windmap・魚の設定読み込み、初期化
   !==========================================================================================
 
   if (is_trace_primary == 1 .or. is_trace_secondary == 1) call Initialize_Normal_Tracer()
   if (is_trace_trajectory == 1) call Initialize_Trajectory_Tracer()
+  if (is_draw_windmap == 1) call Initialize_windmap()
 
   !******************************************************************************************
   ! 初期状態の計算、アウトプット
@@ -166,6 +167,11 @@ program gelate
   end if
 
   !==========================================================================================
+  ! WindMapの初期散布
+  !==========================================================================================
+  if (is_draw_windmap == 1) call update_windmap()
+
+  !==========================================================================================
   ! 初期状態アウトプット
   !==========================================================================================
   call cg_iric_write_sol_start(cgnsOut, is_error)
@@ -187,6 +193,8 @@ program gelate
   if (is_trace_secondary == 1) call write_sol_normal_tracer("secondary", secondary)
   ! 軌跡追跡トレーサの出力
   if (is_trace_trajectory == 1) call write_sol_trajectory_tracer(trajectory)
+  ! windmapの出力
+  if (is_draw_windmap == 1) call write_sol_windmap()
 
   call cg_iric_write_sol_end(cgnsOut, is_error)
 
@@ -330,6 +338,11 @@ program gelate
             end if
           end if
 
+          !------------------------------------------------------------------------------------------
+          ! WindMapの更新
+          !------------------------------------------------------------------------------------------
+          if (is_draw_windmap == 1) call update_windmap()
+
         end do !time_step_trace = 1, tracking_count
 
         !------------------------------------------------------------------------------------------
@@ -362,6 +375,8 @@ program gelate
         if (is_trace_secondary == 1) call write_sol_normal_tracer("secondary", secondary)
         ! 軌跡追跡トレーサの出力
         if (is_trace_trajectory == 1) call write_sol_trajectory_tracer(trajectory)
+        ! windmapの出力
+        if (is_draw_windmap == 1) call write_sol_windmap()
 
       end if
 
@@ -413,7 +428,7 @@ contains
     else
       write (*, '(a)') "  Trace Trajectory tracer           :         enable"
     end if
-    if (is_draw_wind_map == 0) then
+    if (is_draw_windmap == 0) then
       write (*, '(a)') "  Drawing wind map                  :        disable"
     else
       write (*, '(a)') "  Drawing wind map                  :         enable"

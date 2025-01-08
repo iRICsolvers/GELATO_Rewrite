@@ -181,6 +181,52 @@ module trace
 
   type(trajectory_tracer) :: trajectory
 
+  !******************************************************************************************
+  ! windmp風トレーサー
+  !******************************************************************************************
+
+  type:: windmap_tracer
+
+    !==========================================================================================
+    ! windmapトレーサー
+    !==========================================================================================
+    !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ! GUIから読み込む値
+    !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+    !> windmapラインの最大数
+    integer:: max_number
+    !> windmapラインの最大保存回数
+    integer:: max_save_times
+    !> windmapラインの寿命(時間)
+    double precision:: life_time
+    !> windmapラインの保存間隔
+    double precision:: line_save_interval
+
+    !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ! トレーサーの属性
+    !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    !> トレーサーのξ座標
+    double precision, dimension(:), allocatable :: tracer_coordinate_xi
+    !> トレーサーのη座標
+    double precision, dimension(:), allocatable :: tracer_coordinate_eta
+
+    !> windmapラインを何回保存したか
+    integer, dimension(:), allocatable :: windmap_save_times
+    !> windmapラインの保存用タイマー
+    double precision, dimension(:), allocatable :: windmap_save_timer
+
+    !> windmapラインのx座標
+    double precision, dimension(:, :), allocatable :: windmap_coordinate_x
+    !> windmapラインのy座標
+    double precision, dimension(:, :), allocatable :: windmap_coordinate_y
+    !> windmapラインの長さ
+    double precision, dimension(:, :), allocatable :: windmap_line_length
+
+  end type windmap_tracer
+
+  type(windmap_tracer) :: windmap
+
 contains
 
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -1928,8 +1974,6 @@ contains
     type(trajectory_tracer), intent(in) :: trace
     !> 何個目のトレーサーかのインデックス
     integer :: tracer_index
-    !> 軌跡の保存回数のインデックス
-    integer :: saved__trajectory_point_index
 
     write (*, '(a40, i10)') "total Special tracer number : ", count(trace%is_tracer_arrived == 1)
     ! is_tracer_arrivedが1のトレーサーの数を出力
@@ -1962,5 +2006,447 @@ contains
     call cg_iric_write_sol_polydata_groupend(cgnsOut, is_error)
 
   end subroutine write_sol_trajectory_tracer
+
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  !
+  ! Windmapのサブルーチン郡
+  !
+  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+  !******************************************************************************************
+  !> @brief windmapの初期化を行うサブルーチン
+  !> @param[inout] windmap  windmapの情報を含む構造体
+  !******************************************************************************************
+  subroutine initialize_windmap()
+
+    integer :: i
+
+    !==========================================================================
+    ! windmapトレーサー
+    !==========================================================================
+    call cg_iric_read_integer(cgnsOut, "max_display_number_windmap_line", windmap%max_number, is_error)
+    call cg_iric_read_real(cgnsOut, "display_life_span_windmap_line", windmap%life_time, is_error)
+    call cg_iric_read_real(cgnsOut, "save_interval_windmap_line", windmap%line_save_interval, is_error)
+
+    ! windmapの最大保存回数
+    windmap%max_save_times = int(windmap%life_time/windmap%line_save_interval)
+
+    allocate (windmap%tracer_coordinate_xi(windmap%max_number))
+    allocate (windmap%tracer_coordinate_eta(windmap%max_number))
+    allocate (windmap%windmap_save_times(windmap%max_number))
+    allocate (windmap%windmap_save_timer(windmap%max_number))
+    allocate (windmap%windmap_coordinate_x(windmap%max_save_times, windmap%max_number))
+    allocate (windmap%windmap_coordinate_y(windmap%max_save_times, windmap%max_number))
+    allocate (windmap%windmap_line_length(windmap%max_save_times - 1, windmap%max_number))
+
+    windmap%tracer_coordinate_xi = 0.0
+    windmap%tracer_coordinate_eta = 0.0
+    windmap%windmap_save_times = 0
+    windmap%windmap_save_timer = 0.0
+    windmap%windmap_coordinate_x = 0.0
+    windmap%windmap_coordinate_y = 0.0
+    windmap%windmap_line_length = 0.0
+
+  end subroutine initialize_windmap
+
+  !******************************************************************************************
+  !> @brief windmapの更新を行うサブルーチン
+  !******************************************************************************************
+  subroutine update_windmap()
+    !> 何個目のトレーサーかのインデックス
+    integer :: tracer_index
+
+    !==========================================================================
+    ! 全トレーサーが対象のループ
+    ! 寿命内及び移動後の位置が生存可能であれば場所を更新、そうでなければ再配置
+    !==========================================================================
+    do tracer_index = 1, windmap%max_number
+
+      if (windmap%windmap_save_times(tracer_index) > 0) call move_windmap_tracer(tracer_index)
+      if (windmap%windmap_save_times(tracer_index) == 0) call add_windmap_tracer(tracer_index)
+
+    end do
+  end subroutine update_windmap
+
+  !******************************************************************************************
+  !> @brief windmapの追加を行うサブルーチン
+  !> @param[in] tracer_index  何個目のトレーサーかのインデックス
+  !******************************************************************************************
+  subroutine add_windmap_tracer(tracer_index)
+    !> 何個目のトレーサーかのインデックス
+    integer :: tracer_index
+
+    !> 投入するかしないか
+    integer :: is_add_tracer = 1
+
+    !> xi方向投入地点座標
+    double precision :: supply_position_xi
+    !> eta方向投入地点座標
+    double precision :: supply_position_eta
+    !> 投入地点のセルインデックス
+    integer :: supply_position_i
+    !> 投入地点のセルインデックス
+    integer :: supply_position_j
+    !> セル内でのξ方向投入地点座標
+    double precision :: supply_position_xi_in_cell
+    !> セル内でのη方向投入地点座標
+    double precision :: supply_position_eta_in_cell
+
+    integer:: i
+    real(8)::drand
+
+    !==========================================================================================
+    ! トレーサー追加先の座標を障害物ではないランダムな場所から探す
+    !==========================================================================================
+    do while (is_add_tracer == 0)
+
+      ! フラグをリセット
+      is_add_tracer = 0
+
+      ! 仮の投入地点を計算
+      supply_position_xi = drand(0)
+      supply_position_eta = drand(0)
+
+      ! 投入箇所のセルのインデックスを調べる
+      call find_tracer_cell_index(supply_position_xi, &
+                                  supply_position_eta, &
+                                  supply_position_i, &
+                                  supply_position_j, &
+                                  supply_position_xi_in_cell, &
+                                  supply_position_eta_in_cell)
+
+      ! 投入箇所が障害物セルかチェック
+      if (obstacle_cell(supply_position_i, supply_position_j) == 1) cycle
+
+      is_add_tracer = 1
+
+    end do
+
+    ! ヘッドの位置を更新
+    windmap%tracer_coordinate_xi(tracer_index) = supply_position_xi
+    windmap%tracer_coordinate_eta(tracer_index) = supply_position_eta
+
+    !==========================================================================================
+    ! トレーサーもつ情報を初期化
+    !==========================================================================================
+    ! windmap_save_timesを更新
+    windmap%windmap_save_times(tracer_index) = 1
+    ! windmap_save_timerをリセット
+    windmap%windmap_save_timer(tracer_index) = 0.0
+    ! windmap_coordinate_x, windmap_coordinate_yをリセット
+    windmap%windmap_coordinate_x(:, tracer_index) = 0.0
+    windmap%windmap_coordinate_y(:, tracer_index) = 0.0
+    ! windmap_line_lengthをリセット
+    windmap%windmap_line_length(:, tracer_index) = 0.0
+
+    !==========================================================================================
+    ! 軌跡の保存
+    !==========================================================================================
+    call transform_general_to_physical( &
+      supply_position_i, &
+      supply_position_j, &
+      supply_position_xi_in_cell, &
+      supply_position_eta_in_cell, &
+      windmap%windmap_coordinate_x(1, tracer_index), &
+      windmap%windmap_coordinate_y(1, tracer_index))
+
+  end subroutine add_windmap_tracer
+
+  !******************************************************************************************
+  !> @brief windmapの移動を行うサブルーチン
+  !> @param[in] tracer_index  何個目のトレーサーかのインデックス
+  !******************************************************************************************
+  subroutine move_windmap_tracer(tracer_index)
+    !> 何個目のトレーサーかのインデックス
+    integer :: tracer_index
+
+    !> トレーサーのあるセルのインデックス
+    integer :: cell_index_i
+    !> トレーサーのあるセルのインデックス
+    integer :: cell_index_j
+    !> トレーサーのセル内でのξ方向座標
+    double precision :: tracer_coordinate_xi_in_cell
+    !> トレーサーのセル内でのη方向座標
+    double precision :: tracer_coordinate_eta_in_cell
+
+    !> 移動後のξ方向座標
+    double precision :: moved_position_xi
+    !> 移動後のη方向座標
+    double precision :: moved_position_eta
+    !> 移動後のセル内でのξ方向座標
+    double precision :: moved_position_xi_in_cell
+    !> 移動後のセル内でのη方向座標
+    double precision :: moved_position_eta_in_cell
+    !> 移動後のセルのi方向インデックス
+    integer :: moved_position_i
+    !> 移動後のセルのj方向インデックス
+    integer :: moved_position_j
+
+    !> トレーサー地点の流速
+    double precision :: tracer_point_velocity_xi
+    !> トレーサー地点の流速
+    double precision :: tracer_point_velocity_eta
+    !> トレーサー地点の渦動粘性係数
+    double precision :: tracer_point_eddy_viscosity_coefficient
+
+    !> トレーサー箇所のξ方向スケーリング係数
+    double precision :: tracer_point_scale_factor_xi
+    !> トレーサー箇所のη方向スケーリング係数
+    double precision :: tracer_point_scale_factor_eta
+
+    !> ランダムウォークの移動距離の標準偏差
+    double precision :: diffusion_std_dev
+
+    !> ボックスミュラーによる正規分布乱数用変数
+    !> 正規分布乱数
+    double precision :: bm_standard_normal_cos
+    !> 正規分布乱数
+    double precision :: bm_standard_normal_sin
+
+    !> 乱数
+    real(8)::drand
+
+    !==========================================================================================
+    ! トレーサーの寿命をチェックして寿命を超えたら再配置
+    !==========================================================================================
+    ! windmap_save_timerを更新
+    call increment_real_value(windmap%windmap_save_timer(tracer_index), time_interval_for_tracking)
+
+    ! windmap_save_timerが寿命を超えたら再配置
+    if (windmap%windmap_save_timer(tracer_index) > windmap%life_time) then
+      windmap%windmap_save_times(tracer_index) = 0
+      return
+    end if
+
+    !==========================================================================================
+    ! トレーサーのあるセルのインデックスを取得
+    !==========================================================================================
+    call find_tracer_cell_index( &
+      windmap%tracer_coordinate_xi(tracer_index), &
+      windmap%tracer_coordinate_eta(tracer_index), &
+      cell_index_i, &
+      cell_index_j, &
+      tracer_coordinate_xi_in_cell, &
+      tracer_coordinate_eta_in_cell)
+
+    !==========================================================================================
+    ! トレーサー位置の各種パラメータを計算
+    !==========================================================================================
+    !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ! トレーサー地点の流速を計算
+    !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    tracer_point_velocity_xi = &
+      calculate_scalar_at_tracer_position( &
+      velocity_xi_node, &
+      cell_index_i, &
+      cell_index_j, &
+      tracer_coordinate_xi_in_cell, &
+      tracer_coordinate_eta_in_cell)
+
+    tracer_point_velocity_eta = &
+      calculate_scalar_at_tracer_position( &
+      velocity_eta_node, &
+      cell_index_i, &
+      cell_index_j, &
+      tracer_coordinate_xi_in_cell, &
+      tracer_coordinate_eta_in_cell)
+
+    !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ! ランダムウォークを考慮
+    !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ! トレーサー地点の渦動粘性係数を計算
+    tracer_point_eddy_viscosity_coefficient = &
+      calculate_scalar_at_tracer_position( &
+      eddy_viscosity_coefficient_node, &
+      cell_index_i, &
+      cell_index_j, &
+      tracer_coordinate_xi_in_cell, &
+      tracer_coordinate_eta_in_cell)
+
+    ! ランダムウォークによる移動距離の標準偏差
+    diffusion_std_dev = sqrt(2*(a_diff*tracer_point_eddy_viscosity_coefficient + b_diff)*time_interval_for_tracking)
+
+    ! 縦方向横方向の正規分布乱数を取得
+    call generate_box_muller_random(bm_standard_normal_cos, bm_standard_normal_sin)
+
+    ! トレーサー地点のスケーリング係数を計算
+    tracer_point_scale_factor_xi = (scale_factor_xi(cell_index_i, cell_index_j + 1)*tracer_coordinate_eta_in_cell &
+                                    + scale_factor_xi(cell_index_i, cell_index_j)*(grid_interval_eta - tracer_coordinate_eta_in_cell)) &
+                                   /grid_interval_eta
+
+    tracer_point_scale_factor_eta = (scale_factor_eta(cell_index_i + 1, cell_index_j)*tracer_coordinate_xi_in_cell &
+                                     + scale_factor_eta(cell_index_i, cell_index_j)*(grid_interval_xi - tracer_coordinate_xi_in_cell)) &
+                                    /grid_interval_xi
+
+    !==========================================================================================
+    ! 移動後の座標を計算
+    !==========================================================================================
+    moved_position_xi = windmap%tracer_coordinate_xi(tracer_index) &
+                        + tracer_point_velocity_xi*time_interval_for_tracking &
+                        + bm_standard_normal_cos*diffusion_std_dev*tracer_point_scale_factor_xi
+
+    moved_position_eta = windmap%tracer_coordinate_eta(tracer_index) &
+                         + tracer_point_velocity_eta*time_interval_for_tracking &
+                         + bm_standard_normal_sin*diffusion_std_dev*tracer_point_scale_factor_eta
+
+    !==========================================================================================
+    ! 境界条件によるチェック
+    !==========================================================================================
+    !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ! 側面の壁では反射する
+    !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    if (moved_position_eta >= 1.) moved_position_eta = 1.-(moved_position_eta - 1.)
+    if (moved_position_eta <= 0.) moved_position_eta = -moved_position_eta
+
+    !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ! 上下流端の周期境界条件による判定
+    !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    if (is_periodic_boundary_condition_Tracers == 1) then
+      ! 周期境界条件の場合は範囲外のトレーサーを移動
+      if (moved_position_xi > 1.0) moved_position_xi = moved_position_xi - 1.
+      if (moved_position_xi < 0.0) moved_position_xi = moved_position_xi + 1.
+    else
+      ! 周期境界じゃない場合範囲外のトレーサーは除去
+      if (moved_position_xi < 0.0 .or. 1.0 + tolerance < moved_position_xi) then
+        windmap%windmap_save_times(tracer_index) = 0
+        return
+      end if
+      ! 精度の誤差によりちょっぴりはみ出ている場合は修正
+      if (1.0 < moved_position_xi .and. moved_position_xi < 1.0 + tolerance) then
+        moved_position_xi = 1.0
+      end if
+    end if
+
+    !==========================================================================================
+    ! 移動後の場所でのチェック
+    !==========================================================================================
+    !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ! 移動後の座標をセルのインデックスに変換
+    !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    call find_tracer_cell_index( &
+      moved_position_xi, &
+      moved_position_eta, &
+      moved_position_i, &
+      moved_position_j, &
+      moved_position_xi_in_cell, &
+      moved_position_eta_in_cell)
+
+    !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ! 移動後が障害物セルの場合は除去
+    !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    if (obstacle_cell(moved_position_i, moved_position_j) == 1) then
+      windmap%windmap_save_times(tracer_index) = 0
+      return
+    end if
+
+    !==========================================================================================
+    ! 問題ないので移動後の座標に更新
+    !==========================================================================================
+    windmap%tracer_coordinate_xi(tracer_index) = moved_position_xi
+    windmap%tracer_coordinate_eta(tracer_index) = moved_position_eta
+
+    !==========================================================================================
+    ! 軌跡保存のタイマーを更新、軌跡保存間隔を超えていたら保存＆ラインの長さ計算
+    !==========================================================================================
+    ! windmap_save_timerが保存間隔を超えたら保存
+    if (int(windmap%windmap_save_timer(tracer_index)/windmap%line_save_interval) > windmap%windmap_save_times(tracer_index)) then
+
+      ! 保存回数を更新
+      call increment_integer_value(windmap%windmap_save_times(tracer_index), 1)
+
+      ! 座標変換して軌跡を保存
+      call transform_general_to_physical( &
+        moved_position_i, &
+        moved_position_j, &
+        moved_position_xi_in_cell, &
+        moved_position_eta_in_cell, &
+        windmap%windmap_coordinate_x(windmap%windmap_save_times(tracer_index), tracer_index), &
+        windmap%windmap_coordinate_y(windmap%windmap_save_times(tracer_index), tracer_index))
+
+      ! ラインの長さを計算
+      windmap%windmap_line_length(windmap%windmap_save_times(tracer_index) - 1, tracer_index) = &
+        sqrt((windmap%windmap_coordinate_x(windmap%windmap_save_times(tracer_index), tracer_index) - &
+              windmap%windmap_coordinate_x(windmap%windmap_save_times(tracer_index) - 1, tracer_index))**2 + &
+             (windmap%windmap_coordinate_y(windmap%windmap_save_times(tracer_index), tracer_index) - &
+              windmap%windmap_coordinate_y(windmap%windmap_save_times(tracer_index) - 1, tracer_index))**2)
+    end if
+
+  end subroutine move_windmap_tracer
+
+  !******************************************************************************************
+  !> @brief windmapの出力を行うサブルーチン
+  !******************************************************************************************
+  subroutine write_sol_windmap()
+    !> 何個目のトレーサーかのインデックス
+    integer :: tracer_index
+    !> 何個目の保存かのインデックス
+    integer :: saved_point_index
+    !> ポリラインの長さの最小値
+    double precision :: polyline_length_min
+    !> ポリラインの長さの最大値
+    double precision :: polyline_length_max
+    !> 正規化された速度
+    double precision :: normalized_velocity
+
+    !==========================================================================
+    ! ポリラインの長さの最小値と最大値を計算
+    !==========================================================================
+    ! ポリラインが一つでもある場合にのみ計算
+    if (minval(windmap%windmap_save_times) >= 2) then
+      polyline_length_min = minval(windmap%windmap_line_length, mask=windmap%windmap_line_length /= 0.0)
+      polyline_length_max = maxval(windmap%windmap_line_length, mask=windmap%windmap_line_length /= 0.0)
+    end if
+
+    !==========================================================================
+    ! Headとwindmapの出力
+    !==========================================================================
+    ! 出力開始
+    call cg_iric_write_sol_particlegroup_groupbegin(cgnsOut, "Windmap Head", is_error)
+    call cg_iric_write_sol_polydata_groupbegin(cgnsOut, 'Windmap', is_error)
+
+    ! トレーサー毎のループ
+    do tracer_index = 1, windmap%max_number
+
+      !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      ! Headの出力
+      !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      ! トレーサーが存在しない場合はスキップ、ないとは思うが保険として
+      if (windmap%windmap_save_times(tracer_index) == 0) cycle
+
+      ! トレーサー座標の出力
+      call cg_iric_write_sol_particlegroup_pos2d( &
+        cgnsOut, &
+        windmap%windmap_coordinate_x(windmap%windmap_save_times(tracer_index), tracer_index), &
+        windmap%windmap_coordinate_y(windmap%windmap_save_times(tracer_index), tracer_index), &
+        is_error)
+
+      !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      ! Polylineの出力
+      !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      if (windmap%windmap_save_times(tracer_index) <= 1) cycle
+      do saved_point_index = 1, windmap%windmap_save_times(tracer_index) - 1
+        ! ポリラインの書き込み
+        call cg_iric_write_sol_polydata_polyline( &
+          cgnsOut, &
+          2, &
+          windmap%windmap_coordinate_x(saved_point_index:saved_point_index + 1, tracer_index), &
+          windmap%windmap_coordinate_y(saved_point_index:saved_point_index + 1, tracer_index), &
+          is_error)
+
+        ! ポリラインの長さ出力
+        call cg_iric_write_sol_polydata_real(cgnsOut, 'Length', windmap%windmap_line_length(saved_point_index, tracer_index), is_error)
+        ! 正規化された速度の計算・出力
+        normalized_velocity = (windmap%windmap_line_length(saved_point_index, tracer_index) - polyline_length_min) &
+                              /(polyline_length_max - polyline_length_min)
+        call cg_iric_write_sol_polydata_real(cgnsOut, 'Normalized Velocity', normalized_velocity, is_error)
+      end do
+
+    end do
+
+    ! 出力終了処理
+    call cg_iric_write_sol_polydata_groupend(cgnsOut, is_error)
+    call cg_iric_write_sol_particlegroup_groupend(cgnsOut, is_error)
+
+  end subroutine write_sol_windmap
 
 end module Trace
