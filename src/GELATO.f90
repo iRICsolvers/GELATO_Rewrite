@@ -297,7 +297,7 @@ program gelate
       !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
       ! トレーサー、魚の処理
       !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-      if (is_trace_primary == 1 .or. is_trace_secondary == 1 .or. is_trace_trajectory == 1 .or. is_simulation_fish == 1) then
+      if (is_trace_primary == 1 .or. is_trace_secondary == 1 .or. is_trace_trajectory == 1 .or. is_simulation_fish == 1 .or. is_draw_windmap == 1) then
 
         !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         ! 移動、追加

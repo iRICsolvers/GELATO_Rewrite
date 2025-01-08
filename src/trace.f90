@@ -2077,7 +2077,7 @@ contains
     integer :: tracer_index
 
     !> 投入するかしないか
-    integer :: is_add_tracer = 1
+    integer :: is_add_tracer = 0
 
     !> xi方向投入地点座標
     double precision :: supply_position_xi
@@ -2100,9 +2100,6 @@ contains
     !==========================================================================================
     do while (is_add_tracer == 0)
 
-      ! フラグをリセット
-      is_add_tracer = 0
-
       ! 仮の投入地点を計算
       supply_position_xi = drand(0)
       supply_position_eta = drand(0)
@@ -2121,6 +2118,9 @@ contains
       is_add_tracer = 1
 
     end do
+
+    ! フラグをリセット
+    is_add_tracer = 0
 
     ! ヘッドの位置を更新
     windmap%tracer_coordinate_xi(tracer_index) = supply_position_xi
