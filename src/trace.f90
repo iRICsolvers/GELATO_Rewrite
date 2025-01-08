@@ -708,7 +708,7 @@ contains
     !> ランダムウォークの移動距離の標準偏差
     double precision :: diffusion_std_dev
 
-    ! ボックスミュラーによる席分布乱数用変数
+    ! ボックスミュラーによる正規分布乱数用変数
     !> 正規分布乱数
     double precision :: bm_standard_normal_cos
     !> 正規分布乱数
@@ -1612,7 +1612,7 @@ contains
     !> ランダムウォークの移動距離の標準偏差
     double precision :: diffusion_std_dev
 
-    ! ボックスミュラーによる席分布乱数用変数
+    ! ボックスミュラーによる正規分布乱数用変数
     !> 正規分布乱数
     double precision :: bm_standard_normal_cos
     !> 正規分布乱数
