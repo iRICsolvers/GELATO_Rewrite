@@ -1,5 +1,6 @@
 module trace
   use iric
+  use common
   use grid
   use result
 
@@ -393,14 +394,13 @@ contains
   !******************************************************************************************
   subroutine generate_box_muller_random(z0, z1)
     implicit none
-    real(8)::drand
     double precision :: u1
     double precision :: u2
     double precision, intent(inout) :: z0
     double precision, intent(inout) :: z1
 
-    u1 = drand(0)
-    u2 = drand(0)
+    call random_number(u1)
+    call random_number(u2)
     z0 = sqrt(-2.*log(u1))*cos(2.*pi*u2)
     z1 = sqrt(-2.*log(u1))*sin(2.*pi*u2)
 
@@ -767,9 +767,6 @@ contains
     !> 正規分布乱数
     double precision :: bm_standard_normal_sin
 
-    !> 乱数
-    real(8)::drand
-
     !==========================================================================================
     ! トレーサーの総数をリセット
     !==========================================================================================
@@ -865,7 +862,8 @@ contains
         !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
         ! 捕獲の判定値の乱数を発生
         !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-        trap_decision_value = drand(0)*100
+        call random_number(trap_decision_value)
+        trap_decision_value = trap_decision_value*100
 
         !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
         ! 捕獲の判定
@@ -1671,9 +1669,6 @@ contains
     !> 正規分布乱数
     double precision :: bm_standard_normal_sin
 
-    !> 乱数
-    real(8)::drand
-
     do tracer_index = 1, tracer%total_tracer_number ! 既存の全てのトレーサーのループ
 
       !==========================================================================================
@@ -1756,7 +1751,8 @@ contains
         !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
         ! 捕獲の判定値の乱数を発生
         !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-        trap_decision_value = drand(0)*100
+        call random_number(trap_decision_value)
+        trap_decision_value = trap_decision_value*100
 
         !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
         ! 捕獲の判定
@@ -2100,7 +2096,6 @@ contains
     double precision :: supply_position_eta_in_cell
 
     integer:: i
-    real(8)::drand
 
     !==========================================================================================
     ! トレーサー追加先の座標を障害物ではないランダムな場所から探す
@@ -2108,8 +2103,8 @@ contains
     do while (is_add_tracer == 0)
 
       ! 仮の投入地点を計算
-      supply_position_xi = drand(0)
-      supply_position_eta = drand(0)
+      call random_number(supply_position_xi)
+      call random_number(supply_position_eta)
 
       ! 投入箇所のセルのインデックスを調べる
       call find_tracer_cell_index(supply_position_xi, &
@@ -2209,9 +2204,6 @@ contains
     double precision :: bm_standard_normal_cos
     !> 正規分布乱数
     double precision :: bm_standard_normal_sin
-
-    !> 乱数
-    real(8)::drand
 
     !==========================================================================================
     ! トレーサーの寿命をチェックして寿命を超えたら再配置
