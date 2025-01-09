@@ -726,10 +726,10 @@
 		</Tab>
 
 		<!-- ウィンドマップ風表示設定 -->
-		<Tab name="Wind_Map" caption="Wind Map Like Plotting">
+		<Tab name="windmap" caption="Wind Map Like Plotting">
 
 			<!-- ウィンドマップ風表示をするか -->
-			<Item name="is_draw_wind_map" caption="Drawing Wind map">
+			<Item name="is_draw_windmap" caption="Drawing Wind map">
 				<Definition valueType="integer" default="0" checkBox="true"/>
 			</Item>
 
@@ -737,21 +737,21 @@
 			<GroupBox caption="Wind Map Setting (Only for Primary Normal Tracers)">
 
 				<!-- ウィンドマップライン最大表示数 -->
-				<Item name="max_display_number_wind_map_line" caption="Max numbers of windmap lines">
+				<Item name="max_display_number_windmap_line" caption="Max numbers of windmap lines">
 					<Definition valueType="integer" default="100" max="1000000">
-						<Condition type="isEqual" target="is_draw_wind_map" value="1"/>
+						<Condition type="isEqual" target="is_draw_windmap" value="1"/>
 					</Definition>
 				</Item>
-
-				<Item name="display_life_span_wind_map_line" caption="Lifespan of each Windmap lines(sec)">
+				<!-- ウィンドマップラインの寿命 -->
+				<Item name="display_life_span_windmap_line" caption="Lifespan of each Windmap lines(sec)">
 					<Definition valueType="real" default="10">
-						<Condition type="isEqual" target="is_draw_wind_map" value="1"/>
+						<Condition type="isEqual" target="is_draw_windmap" value="1"/>
 					</Definition>
 				</Item>
-
-				<Item name="save_interval_wind_map_line" caption="Time step for WindMap memory(sec)">
+				<!-- ウィンドマップラインの保存間隔 -->
+				<Item name="save_interval_windmap_line" caption="Time step for WindMap memory(sec)">
 					<Definition valueType="real" default="1">
-						<Condition type="isEqual" target="is_draw_wind_map" value="1"/>
+						<Condition type="isEqual" target="is_draw_windmap" value="1"/>
 					</Definition>
 				</Item>
 
