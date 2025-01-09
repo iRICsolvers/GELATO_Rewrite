@@ -89,6 +89,12 @@ module common
   !> 小数誤差の許容範囲
   double precision, parameter :: tolerance = 1.0d-14
 
+  !******************************************************************************************
+  ! 乱数のシード値
+  !******************************************************************************************
+  !> 乱数のシード値
+  integer :: seed(1)
+
 contains
 
   !> CGNSファイルを開く処理
@@ -191,6 +197,10 @@ contains
       a_diff = 0.
       b_diff = 0.
     end if
+
+    ! 乱数のシード値
+    call cg_iric_read_integer(cgnsOut, "random_seed", seed(1), is_error)
+    call random_seed(put=seed)
 
   end subroutine read_common_parameter
 
