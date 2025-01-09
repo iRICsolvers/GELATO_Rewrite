@@ -1404,7 +1404,7 @@
 		<Tab name="others" caption="others">
 
 			<!-- 一定のマニング粗度を使用するか -->
-			<Item col="1" name="is_use_constant_roughness" caption="Use constant roughness">
+			<Item name="is_use_constant_roughness" caption="Use constant roughness">
 				<Definition valueType="integer" default="1" checkBox="true" />
 			</Item>
 
@@ -1412,6 +1412,12 @@
 			<Item name="constant_roughness" caption="Manning&apos;s roughness coefficient">
 				<Definition valueType="real"  default="0.03" tooltips="The Manning's roughness coefficient is used to calculate the friction velocity and eddy viscosity coefficient.">
 					<Condition type="isEqual" target="flow_conditions_used_for_tracking" value="0" />
+				</Definition>
+			</Item>
+
+			<!-- 乱数のシード値 -->
+			<Item name="random_seed" caption="Random Seed Value">
+				<Definition valueType="integer" default="0" min="0">
 				</Definition>
 			</Item>
 
