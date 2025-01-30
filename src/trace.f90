@@ -250,8 +250,8 @@ contains
     real(8), intent(in) :: tracer_coordinate_eta
     integer, intent(inout) :: cell_index_i
     integer, intent(inout) :: cell_index_j
-    double precision, intent(inout) :: tracer_coordinate_xi_in_cell
-    double precision, intent(inout) :: tracer_coordinate_eta_in_cell
+    real(8), intent(inout), optional :: tracer_coordinate_xi_in_cell
+    real(8), intent(inout), optional :: tracer_coordinate_eta_in_cell
 
     cell_index_i = int(tracer_coordinate_xi/grid_interval_xi) + 1
     cell_index_j = int(tracer_coordinate_eta/grid_interval_eta) + 1
@@ -267,8 +267,12 @@ contains
     if (abs(tracer_coordinate_eta - 1.0d0) < tolerance) cell_index_j = cell_count_j
 
     ! セル内のトレーサーのξ、η座標を計算
-    tracer_coordinate_xi_in_cell = tracer_coordinate_xi - grid_interval_xi*(cell_index_i - 1)
-    tracer_coordinate_eta_in_cell = tracer_coordinate_eta - grid_interval_eta*(cell_index_j - 1)
+    if (present(tracer_coordinate_xi_in_cell)) then
+      tracer_coordinate_xi_in_cell = tracer_coordinate_xi - grid_interval_xi*(cell_index_i - 1)
+    end if
+    if (present(tracer_coordinate_eta_in_cell)) then
+      tracer_coordinate_eta_in_cell = tracer_coordinate_eta - grid_interval_eta*(cell_index_j - 1)
+    end if
 
   end subroutine find_tracer_cell_index
 
