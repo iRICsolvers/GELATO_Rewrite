@@ -21,9 +21,9 @@ module common
   ! 計算の基本設定(時間など)
   !******************************************************************************************
   !> トレーサー追跡の時間間隔
-  double precision :: time_interval_for_tracking
+  real(8) :: time_interval_for_tracking
   !> 計算終了時刻
-  double precision :: time_end_out
+  real(8) :: time_end_out
   !> 計算結果出力間隔倍率
   integer :: output_interval_magnification
   !> 出力する時刻に元の時刻を使用するか
@@ -32,9 +32,9 @@ module common
   !> 読み込む計算結果のタイムステップ数
   integer :: time_step_count_in
   !> 読み込む計算結果の初期時刻
-  double precision :: time_start_in
+  real(8) :: time_start_in
   !> 読み込む計算結果の終了時刻
-  double precision :: time_end_in
+  real(8) :: time_end_in
 
   !******************************************************************************************
   ! 計算の基本設定（シミュレーションや描画の有無）
@@ -65,7 +65,7 @@ module common
   !> マニングの粗度係数に一定の値を使用するか
   integer :: is_use_constant_roughness
   !> マニングの粗度係数の一定値
-  double precision :: constant_roughness
+  real(8) :: constant_roughness
 
   !> トレーサーの追跡に一定値を使用するか
   integer :: flow_conditions_used_for_tracking
@@ -73,21 +73,21 @@ module common
   !> ランダムウォークによる拡散を考慮するか
   integer :: is_consider_Diffusion
   !> 拡散係数a
-  double precision :: a_diff
+  real(8) :: a_diff
   !> 拡散定数b
-  double precision :: b_diff
+  real(8) :: b_diff
 
   !******************************************************************************************
   ! 計算に使用する定数
   !******************************************************************************************
   !> 重力加速度 (m/s^2)
-  double precision, parameter :: g = 9.8
+  real(8), parameter :: g = 9.8
   !> カーマン定数
-  double precision, parameter :: karman_constant = 0.4
+  real(8), parameter :: karman_constant = 0.4
   !> 円周率
-  double precision, parameter :: pi = 3.141592
+  real(8), parameter :: pi = 3.141592
   !> 小数誤差の許容範囲
-  double precision, parameter :: tolerance = 1.0d-14
+  real(8), parameter :: tolerance = 1.0d-14
 
   !******************************************************************************************
   ! 乱数のシード値

@@ -19,32 +19,32 @@ program gelate
   integer :: time_step_trace
 
   !> 読み込んだタイムステップの時刻
-  double precision :: time_in_origin
+  real(8) :: time_in_origin
   !> ひとつ前のタイムステップの時刻
-  double precision :: time_in_previous_origin
+  real(8) :: time_in_previous_origin
   !> 読み込んだタイムステップの時刻
-  double precision :: time_in
+  real(8) :: time_in
   !> ひとつ前のタイムステップの時刻
-  double precision :: time_in_previous
+  real(8) :: time_in_previous
   !> ひとつ前のタイムステップからの経過時間
-  double precision :: delta_time_in
+  real(8) :: delta_time_in
 
   !> 出力用の時刻
-  double precision :: time_out
+  real(8) :: time_out
   !> 追跡用の時刻
-  double precision :: time_trace
+  real(8) :: time_trace
   !> 初期状態の出力用の時刻
-  double precision :: time_out_initial
+  real(8) :: time_out_initial
   !> ひとつ前のタイムステップの時刻
-  double precision :: time_out_previous
+  real(8) :: time_out_previous
   !> 出力時間間隔
-  double precision :: delta_time_out
+  real(8) :: delta_time_out
 
   ! 何回追跡するか
   integer :: tracking_count
 
   !> 経過時間
-  double precision :: time_since_start
+  real(8) :: time_since_start
 
   !> 停止ボタンが押されたか
   integer :: is_pressed_stop_button

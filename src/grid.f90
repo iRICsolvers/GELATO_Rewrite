@@ -22,12 +22,12 @@ module grid
   integer :: cell_count_j
 
   !> 格子のy座標
-  double precision, dimension(:, :), allocatable :: node_coordinate_x
+  real(8), dimension(:, :), allocatable :: node_coordinate_x
   !> 格子のy座標
-  double precision, dimension(:, :), allocatable :: node_coordinate_y
+  real(8), dimension(:, :), allocatable :: node_coordinate_y
 
   !> 水路長
-  double precision :: channel_length
+  real(8) :: channel_length
 
   !> j方向中央のインデックス
   integer :: j_center
@@ -40,9 +40,9 @@ module grid
   !> クローンニングセル
   integer, dimension(:, :), allocatable :: is_cloning_cell
   !> マニング粗度(セル)
-  double precision, dimension(:, :), allocatable :: roughness_cell
+  real(8), dimension(:, :), allocatable :: roughness_cell
   !> マニング粗度(格子点)
-  double precision, dimension(:, :), allocatable :: roughness_node
+  real(8), dimension(:, :), allocatable :: roughness_node
   !> 植生発生セル
   integer, dimension(:, :), allocatable :: is_vegetation_cell
   !> 礫発生セル
@@ -54,37 +54,37 @@ module grid
   ! 一般化座標系関係
   !******************************************************************************************
   !> ξ方向一般座標系格子
-  double precision :: grid_interval_xi
+  real(8) :: grid_interval_xi
   !> ξ方向物理座標での格子点間距離の最小値
-  double precision :: grid_physical_distance_xi_min
+  real(8) :: grid_physical_distance_xi_min
   !> ξ方向スケーリング係数
-  double precision, dimension(:, :), allocatable :: scale_factor_xi
+  real(8), dimension(:, :), allocatable :: scale_factor_xi
   !> ξ方向でのxの勾配(中央差分法)
-  double precision, dimension(:, :), allocatable :: x_gradient_in_xi
+  real(8), dimension(:, :), allocatable :: x_gradient_in_xi
   !> ξ方向でのyの勾配(中央差分法)
-  double precision, dimension(:, :), allocatable :: y_gradient_in_xi
+  real(8), dimension(:, :), allocatable :: y_gradient_in_xi
   !> ξ方向の変位を x方向に変換するための変換行列の要素
-  double precision, dimension(:, :), allocatable :: xi_to_x_component
+  real(8), dimension(:, :), allocatable :: xi_to_x_component
   !> ξ方向の変位を y方向に変換するための変換行列の要素
-  double precision, dimension(:, :), allocatable :: xi_to_y_component
+  real(8), dimension(:, :), allocatable :: xi_to_y_component
 
   !> η方向一般座標系格子間隔
-  double precision :: grid_interval_eta
+  real(8) :: grid_interval_eta
   !> η方向物理座標での格子点間距離の最小値
-  double precision :: grid_physical_distance_eta_min
+  real(8) :: grid_physical_distance_eta_min
   !> η方向スケーリング係数
-  double precision, dimension(:, :), allocatable :: scale_factor_eta
+  real(8), dimension(:, :), allocatable :: scale_factor_eta
   !> ξ方向でのxの勾配(中央差分法)
-  double precision, dimension(:, :), allocatable :: x_gradient_in_eta
+  real(8), dimension(:, :), allocatable :: x_gradient_in_eta
   !> ξ方向でのyの勾配(中央差分法)
-  double precision, dimension(:, :), allocatable :: y_gradient_in_eta
+  real(8), dimension(:, :), allocatable :: y_gradient_in_eta
   !> ξ方向の変位を x方向に変換するための変換行列の要素
-  double precision, dimension(:, :), allocatable :: eta_to_x_component
+  real(8), dimension(:, :), allocatable :: eta_to_x_component
   !> ξ方向の変位を y方向に変換するための変換行列の要素
-  double precision, dimension(:, :), allocatable :: eta_to_y_component
+  real(8), dimension(:, :), allocatable :: eta_to_y_component
 
   !> ヤコビアンの逆数
-  double precision, dimension(:, :), allocatable :: inverse_jacobian
+  real(8), dimension(:, :), allocatable :: inverse_jacobian
 
 contains
 
@@ -146,7 +146,7 @@ contains
     !==========================================================================================
     call cell2node(roughness_cell, roughness_node)
 
-    call compute_transform_metrics
+    call compute_transform_metrics()
 
   end subroutine Load_Grid
 
@@ -157,17 +157,17 @@ contains
     implicit none
 
     !> ξ方向一般座標系格子間隔
-    double precision :: grid_physical_distance_xi
+    real(8) :: grid_physical_distance_xi
     !> η方向一般座標系格子間隔
-    double precision :: grid_physical_distance_eta
+    real(8) :: grid_physical_distance_eta
     !> 特定の格子でのξ方向におけるxの勾配
-    double precision :: x_base_gradient_in_xi
+    real(8) :: x_base_gradient_in_xi
     !> 特定の格子でのξ方向におけるyの勾配
-    double precision :: y_base_gradient_in_xi
+    real(8) :: y_base_gradient_in_xi
     !> 特定の格子でのη方向におけるxの勾配
-    double precision :: x_base_gradient_in_eta
+    real(8) :: x_base_gradient_in_eta
     !> 特定の格子でのη方向におけるyの勾配
-    double precision :: y_base_gradient_in_eta
+    real(8) :: y_base_gradient_in_eta
 
     !> i方向ループ用の変数
     integer :: i

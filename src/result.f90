@@ -25,18 +25,18 @@ module result
   character(len=strMax) :: elevation_name
 
   !> X軸流速を格納する配列
-  double precision, dimension(:, :), allocatable :: velocity_x_node
+  real(8), dimension(:, :), allocatable :: velocity_x_node
   !> Y軸流速を格納する配列
-  double precision, dimension(:, :), allocatable :: velocity_y_node
+  real(8), dimension(:, :), allocatable :: velocity_y_node
   !> 水深を格納する配列
-  double precision, dimension(:, :), allocatable :: depth_node
+  real(8), dimension(:, :), allocatable :: depth_node
   !> 標高を格納する配列
-  double precision, dimension(:, :), allocatable :: elevation_node
+  real(8), dimension(:, :), allocatable :: elevation_node
 
   !> 水深を格納する配列
-  double precision, dimension(:, :), allocatable :: depth_cell
+  real(8), dimension(:, :), allocatable :: depth_cell
   !> 標高を格納する配列
-  double precision, dimension(:, :), allocatable :: elevation_cell
+  real(8), dimension(:, :), allocatable :: elevation_cell
 
   !==========================================================================================
   ! 参考として読み込む計算結果
@@ -60,31 +60,31 @@ module result
   character(len=strMax) :: dye_concentration_name
 
   !> 流量を格納する配列
-  double precision, dimension(:), allocatable :: discharge
+  real(8), dimension(:), allocatable :: discharge
   !> 河床変動量を格納する配列
-  double precision, dimension(:, :), allocatable :: elevation_change_node
+  real(8), dimension(:, :), allocatable :: elevation_change_node
   !> 河床変動量を格納する配列
-  double precision, dimension(:, :), allocatable :: vorticity_node
+  real(8), dimension(:, :), allocatable :: vorticity_node
   !> 河床変動量を格納する配列
-  double precision, dimension(:, :), allocatable :: dye_concentration_node
+  real(8), dimension(:, :), allocatable :: dye_concentration_node
 
   !==========================================================================================
   ! 計算して求める値
   !==========================================================================================
   !> 水位を格納する配列(格子点)
-  double precision, dimension(:, :), allocatable :: water_surface_elevation_node
+  real(8), dimension(:, :), allocatable :: water_surface_elevation_node
   !> 水位を格納する配列(セル)
-  double precision, dimension(:, :), allocatable :: water_surface_elevation_cell
+  real(8), dimension(:, :), allocatable :: water_surface_elevation_cell
   !> 渦動粘性係数を格納する配列
-  double precision, dimension(:, :), allocatable :: eddy_viscosity_coefficient_node
+  real(8), dimension(:, :), allocatable :: eddy_viscosity_coefficient_node
   !> 摩擦速度
-  double precision, dimension(:, :), allocatable :: u_star_node
+  real(8), dimension(:, :), allocatable :: u_star_node
   !> 摩擦速度
-  double precision, dimension(:, :), allocatable :: u_star_cell
+  real(8), dimension(:, :), allocatable :: u_star_cell
   !> ξ方向流速
-  double precision, dimension(:, :), allocatable :: velocity_xi_node
+  real(8), dimension(:, :), allocatable :: velocity_xi_node
   !> η方向流速
-  double precision, dimension(:, :), allocatable :: velocity_eta_node
+  real(8), dimension(:, :), allocatable :: velocity_eta_node
 
 contains
 
@@ -169,11 +169,11 @@ contains
   subroutine read_parameter_for_Trace_from_gui()
     implicit none
     !> GUIから読み込んだ一定流速
-    double precision :: Constant_velocity
+    real(8) :: Constant_velocity
     !> GUIから読み込んだ一定水深
-    double precision :: Constant_Depth
+    real(8) :: Constant_Depth
     !> 一般座標系に変換した一定流速
-    double precision :: Constant_velocity_xi
+    real(8) :: Constant_velocity_xi
 
     !> i方向ループ用の変数
     integer :: i
@@ -218,9 +218,9 @@ contains
 
     integer :: i, j
     !> 流速ベクトルの大きさ
-    double precision :: velocity_magnitude
+    real(8) :: velocity_magnitude
     !> エネルギー勾配
-    double precision :: energy_slope
+    real(8) :: energy_slope
 
     !==========================================================================================
     ! 水位の計算
