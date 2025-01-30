@@ -1549,7 +1549,7 @@ contains
         supply_position_eta = tracer%supply_position_eta_first + tracer%supply_interval_eta*supply_loop_index_eta
 
         ! 誤差範囲内なら誤差を補正
-        if (supply_position_eta > tracer%supply_position_eta_end + tolerance) exit
+        if (supply_position_eta > tracer%supply_position_eta_end + tolerance) cycle
 
         ! 誤差範囲内なら誤差を補正
         if (supply_position_eta > tracer%supply_position_eta_end) supply_position_eta = tracer%supply_position_eta_end
