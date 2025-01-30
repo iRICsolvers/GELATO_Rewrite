@@ -807,6 +807,7 @@ contains
       tracer%is_tracer_movable(tracer_index) = 1
 
       ! 水深と摩擦速度によるチェック
+      ! TODO: この関数はもう一度見直す、引数減らせるはず。
       call check_tracer(tracer%Movable_Critical_depth, &
                         tracer%Movable_Critical_u_star, &
                         tracer%tracer_coordinate_xi(tracer_index), &
