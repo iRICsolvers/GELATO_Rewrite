@@ -193,7 +193,7 @@ contains
     !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     ! 水路上流端中心部(j=j_center)の流速を一般座標系に
     !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    Constant_velocity_xi = xi_to_x_component(1, j_center)*Constant_velocity
+    Constant_velocity_xi = x_to_xi_component(1, j_center)*Constant_velocity
 
     !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     ! 水路上流端中心部(j=j_center)の流速を全ての格子点に適用
@@ -203,10 +203,19 @@ contains
 
     !==========================================================================================
     ! 各格子点での物理座標系の流速、水深を計算
+    ! 逆ヤコビ行列を用いて一般座標系から物理座標系に変換
+    ! 本来の変換式：
+    ! velocity_x_node = xi_to_x_component * velocity_xi_node + eta_to_x_component * velocity_eta_node
+    ! velocity_y_node = xi_to_y_component * velocity_xi_node + eta_to_y_component * velocity_eta_node
+    ! 逆ヤコビ行列の定義より：
+    ! x_to_xi_component  = inverse_jacobian * eta_to_y_component
+    ! y_to_xi_component  = -inverse_jacobian * eta_to_x_component
+    ! x_to_eta_component = -inverse_jacobian * xi_to_y_component
+    ! y_to_eta_component = inverse_jacobian * xi_to_x_component
     !==========================================================================================
 
-    velocity_x_node = (eta_to_y_component*velocity_xi_node - xi_to_y_component*velocity_eta_node)/inverse_jacobian
-    velocity_y_node = (-eta_to_x_component*velocity_xi_node + xi_to_x_component*velocity_eta_node)/inverse_jacobian
+    velocity_x_node = (y_to_eta_component*velocity_xi_node - y_to_xi_component*velocity_eta_node)/inverse_jacobian
+    velocity_y_node = (-x_to_eta_component*velocity_xi_node + x_to_xi_component*velocity_eta_node)/inverse_jacobian
     depth_node = Constant_Depth
 
   end subroutine read_parameter_for_Trace_from_gui
@@ -258,8 +267,8 @@ contains
     ! 流速（一般座標系)の計算
     !==========================================================================================
     if (flow_conditions_used_for_tracking == 0) then
-      velocity_xi_node = xi_to_x_component*velocity_x_node + xi_to_y_component*velocity_y_node
-      velocity_eta_node = eta_to_x_component*velocity_x_node + eta_to_y_component*velocity_y_node
+      velocity_xi_node = x_to_xi_component*velocity_x_node + y_to_xi_component*velocity_y_node
+      velocity_eta_node = x_to_eta_component*velocity_x_node + y_to_eta_component*velocity_y_node
     end if
 
     !==========================================================================================
