@@ -2,6 +2,7 @@ module fish_module
 
   use iric
   use common
+  use timer_module
   use grid
   use result
   use trace
@@ -36,6 +37,8 @@ module fish_module
   real(8) :: count_time_start
   !> 計測終了時間
   real(8) :: count_time_end
+  !> 通過した魚体数のカウンター
+  integer, save :: passed_fish_count = 0
 
   !******************************************************************************************
   ! 魚のパラメーター
@@ -48,47 +51,47 @@ module fish_module
   integer :: fish_group_count
 
   !> 各グループの魚の数
-  integer, allocatable(:) :: fish_count_in_group
+  integer, dimension(:), allocatable :: fish_count_in_group
   !> グループの割合
-  integer, allocatable(:) :: fish_group_ratio
+  integer, dimension(:), allocatable :: fish_group_ratio
   !> 体長
-  real(8), allocatable(:) :: fish_body_length
+  real(8), dimension(:), allocatable :: fish_body_length
   !> 遊泳速度
-  real(8), allocatable(:) :: fish_cruise_speed
+  real(8), dimension(:), allocatable :: fish_cruise_speed
   !> 遊泳継続時間
-  real(8), allocatable(:) :: fish_cruise_time
+  real(8), dimension(:), allocatable :: fish_cruise_time
   !> 突進速度
-  real(8), allocatable(:) :: fish_rush_speed
+  real(8), dimension(:), allocatable :: fish_rush_speed
   !> 突進継続時間
-  real(8), allocatable(:) :: fish_rush_time
+  real(8), dimension(:), allocatable :: fish_rush_time
   !> 魚の遊泳、突進のサイクル時間
-  real(8), allocatable(:) :: fish_cycle_time
+  real(8), dimension(:), allocatable :: fish_cycle_time
   !> 移動限界水深
-  real(8), allocatable(:) :: movable_critical_depth_fish
+  real(8), dimension(:), allocatable :: movable_critical_depth_fish
   !> @brief 移動限界水深でのさかなの挙動
   !> @param 0: その場に留まる
   !> @param 1: 逆方向に泳ぐ
   !> @param 2: 流れに身を任せる
   !> @param 3: ランダムな方向に泳ぐ
-  real(8), allocatable(:) :: fish_handling_in_critical_depth
+  integer, dimension(:), allocatable :: fish_handling_in_critical_depth
   !> 移動限界水深での行動時間
-  real(8), allocatable(:) :: behavior_time_in_critical_depth
+  real(8), dimension(:), allocatable :: behavior_time_in_critical_depth
   !> ジャンプに挑戦する高さ
-  real(8), allocatable(:) :: jump_try_height
+  real(8), dimension(:), allocatable :: jump_try_height
   !> ジャンプ可能な高さ
-  real(8), allocatable(:) :: jumpable_height
+  real(8), dimension(:), allocatable :: jumpable_height
   !> ジャンプ可能な距離
-  real(8), allocatable(:) :: jumpable_distance
+  real(8), dimension(:), allocatable :: jumpable_distance
   !> ジャンプ中に色が変わる時間
-  real(8), allocatable(:) :: color_changing_time_during_jump
+  real(8), dimension(:), allocatable :: color_changing_time_during_jump
 
   !******************************************************************************************
   ! 魚のポリゴン形状等に関するパラメータ
   !******************************************************************************************
   !> 魚の中心線のセグメント数
-  integer :: centerline_segments = 20
+  integer, parameter :: centerline_segments = 20
   !> 魚の形状を表す頂点の配列のサイズ
-  integer :: fish_outline_point_count = 43 ! centerline_segments*2+3
+  integer, parameter :: fish_outline_point_count = 43 ! centerline_segments*2+3
 
   !> 魚の形状をプロットするためのx座標
   real(8) :: fish_outline_x(fish_outline_point_count)
@@ -99,21 +102,21 @@ module fish_module
   ! 魚トレーサーの持つ変数
   !******************************************************************************************
   !> 魚のξ方向座標
-  real(8), allocatable :: fish_coordinate_xi
+  real(8), dimension(:), allocatable :: fish_coordinate_xi
   !> 魚のη方向座標
-  real(8), allocatable :: fish_coordinate_eta
+  real(8), dimension(:), allocatable :: fish_coordinate_eta
   !> 魚のアングル(radian)(0=x軸方向)(0~2π)
-  real(8), allocatable :: fish_angle
+  real(8), dimension(:), allocatable :: fish_angle
   !> 魚の最小水深以下での滞在時間
-  real(8), allocatable :: fish_stay_time_in_critical_depth
+  real(8), dimension(:), allocatable :: fish_stay_time_in_critical_depth
   !> ジャンプ後の経過時間
-  real(8), allocatable :: after_jump_timer
+  real(8), dimension(:), allocatable :: after_jump_timer
   !> どのグループに属するか
-  integer, allocatable :: fish_group
+  integer, dimension(:), allocatable :: fish_group
   !> 魚の生存フラグ
-  integer, allocatable :: is_fish_alived
+  integer, dimension(:), allocatable :: is_fish_alived
   !> 魚の固有タイマー
-  real(8), allocatable :: fish_timer
+  real(8), dimension(:), allocatable :: fish_timer
 
 contains
 
@@ -131,7 +134,7 @@ contains
   subroutine get_sorted_indices(array, indices)
     implicit none
     !> ソート対象の配列、real(8)またはinteger型のみ対応、この配列は変更されない
-    class(*), intent(in) :: array(:)
+    integer, intent(in) :: array(:)
     !> 大きい順で並べた際のインデックスを格納する配列
     integer, intent(out) :: indices(:)
     !> ループ用の変数
@@ -148,46 +151,19 @@ contains
     ! インデックスを初期化
     indices = [(i, i=1, n)]
 
-    ! 配列が割り当てられているか確認
-    if (allocated(array)) then
-      ! 配列の型に応じて処理を分岐
-      select type (array)
-        ! 配列がreal(8)型の場合
-      type is (real(8))
-        ! バブルソートアルゴリズムを使用してインデックスをソート
-        do i = 1, n - 1
-          do j = i + 1, n
-            ! 大きい順に並べ替える
-            if (array(indices(i)) < array(indices(j))) then
-              ! インデックスを交換
-              temp_index = indices(i)
-              indices(i) = indices(j)
-              indices(j) = temp_index
-            end if
-          end do
-        end do
-        ! 配列がinteger型の場合
-      type is (integer)
-        ! バブルソートアルゴリズムを使用してインデックスをソート
-        do i = 1, n - 1
-          do j = i + 1, n
-            ! 大きい順に並べ替える
-            if (array(indices(i)) < array(indices(j))) then
-              ! インデックスを交換
-              temp_index = indices(i)
-              indices(i) = indices(j)
-              indices(j) = temp_index
-            end if
-          end do
-        end do
-        ! サポートされていない型の場合
-      class default
-        print *, "Unsupported array type. Supported types are real(8) and integer."
-      end select
-    else
-      ! 配列が割り当てられていない場合のエラーメッセージ
-      print *, "Error: The array is not allocated."
-    end if
+    ! バブルソートアルゴリズムを使用してインデックスをソート
+    do i = 1, n - 1
+      do j = i + 1, n
+        ! 大きい順に並べ替える
+        if (array(indices(i)) < array(indices(j))) then
+          ! インデックスを交換
+          temp_index = indices(i)
+          indices(i) = indices(j)
+          indices(j) = temp_index
+        end if
+      end do
+    end do
+
   end subroutine get_sorted_indices
 
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -271,6 +247,7 @@ contains
     allocate (fish_stay_time_in_critical_depth(fish_count_max))
     allocate (fish_group(fish_count_max))
     allocate (is_fish_alived(fish_count_max))
+    allocate (fish_timer(fish_count_max))
 
     fish_coordinate_xi = 0.0
     fish_coordinate_eta = 0.0
@@ -288,12 +265,49 @@ contains
   subroutine add_fish_tracer()
 
     !==========================================================================================
+    ! 初期位置での魚のアングルを求めるための変数
+    !==========================================================================================
+    !> 魚のアングルを求める用の微小変位(一般座標)
+    real(8) :: displacement_xi = -0.0001
+    !> 魚のアングルを求める用の微小変位(一般座標)
+    real(8) :: displacement_eta = 0.0
+    !> 魚のアングルを求める用の微小変位(物理座標)
+    real(8) :: displacement_x
+    !> 魚のアングルを求める用の微小変位(物理座標)
+    real(8) :: displacement_y
+
+    !> 初期位置の魚の存在するセルのインデックス
+    integer :: fish_position_i
+    !> 初期位置の魚の存在するセルのインデックス
+    integer :: fish_position_j
+    !> 初期位置の魚の存在するセル内のξ方向座標
+    real(8) :: fish_position_xi_in_cell
+    !> 初期位置の魚の存在するセル内のη方向座標
+    real(8) :: fish_position_eta_in_cell
+
+    ! 魚の位置でのヤコビ行列の行列式の逆数（1/det(J)
+    real(8) :: fish_point_inverse_jacobian
+    ! !> x方向の変位を ξ方向に変換する逆ヤコビ行列の要素（∂ξ/∂x = ∂y/∂η / det(J)）
+    real(8) :: fish_point_x_to_xi_component
+    !> y方向の変位を ξ方向に変換する逆ヤコビ行列の要素（∂ξ/∂y = -∂x/∂η / det(J)）
+    real(8) :: fish_point_y_to_xi_component
+    !> x方向の変位を η方向に変換する逆ヤコビ行列の要素（∂η/∂x = -∂y/∂ξ / det(J)）
+    real(8) :: fish_point_x_to_eta_component
+    !> y方向の変位を η方向に変換する逆ヤコビ行列の要素（∂η/∂y = ∂x/∂ξ / det(J)）
+    real(8) :: fish_point_y_to_eta_component
+
+    !==========================================================================================
     ! Fishトレーサー配置関係のパラメータ
     !==========================================================================================
     !> @brief 魚の配置方法
     !> @param 1: 無次元座標で配置する
     !> @param 2: 総数を与えてランダムに配置する
     integer :: fish_arrangement_method
+
+    !==========================================================================================
+    !> ループ用の変数
+    !==========================================================================================
+    integer :: fish_index
 
     !==========================================================================================
     ! Fishトレーサー配置方法の読み込み
@@ -307,12 +321,70 @@ contains
       call add_fish_tracer_with_range()
     else if (fish_arrangement_method == 2) then
       call add_fish_tracer_random()
-    end if call
+    end if
+
+    !=========================================================================================
+    ! 魚のグループ割り当て、ここでグループに応じた魚の属性を与える。
+    !=========================================================================================
+    call set_fish_group()
 
     !==========================================================================================
     ! 初期配置での条件チェック、再配置および除去
     !==========================================================================================
-    call check_fish_tracer(fish_arrangement_method)
+    call check_fish_initial_position()
+
+    !==========================================================================================
+    ! 初期配置時の魚のアングルを設定
+    ! 初期条件では流速が定まっていない可能性もあるため、ξ方向(上流方向)に向かうように設定
+    ! 魚のアングルは物理座標に置ける角度であるため、魚の位置からξ方向の変位とη方向(=0)の変位を微小な仮値で与え物理座標に直した後、角度に変換する。
+    !==========================================================================================
+    do fish_index = 1, fish_count
+      if (is_fish_alived(fish_index) == 0) cycle ! 生存フラグが立っていない場合はスキップ
+
+      ! 魚の位置のセルインデックス等を取得
+      call find_tracer_cell_index(fish_coordinate_xi(fish_index), fish_coordinate_eta(fish_index), &
+                                  fish_position_i, fish_position_j, &
+                                  fish_position_xi_in_cell, fish_position_eta_in_cell)
+
+      ! 魚の位置でのヤコビ行列の行列式の逆数（1/det(J)
+      fish_point_inverse_jacobian = calculate_scalar_at_tracer_position(inverse_jacobian, &
+                                                                        fish_position_i, &
+                                                                        fish_position_j, &
+                                                                        fish_position_xi_in_cell, &
+                                                                        fish_position_eta_in_cell)
+
+      ! x方向の変位を ξ方向に変換するための変換行列の要素
+      fish_point_x_to_xi_component = calculate_scalar_at_tracer_position(x_to_xi_component, &
+                                                                         fish_position_i, &
+                                                                         fish_position_j, &
+                                                                         fish_position_xi_in_cell, &
+                                                                         fish_position_eta_in_cell)
+      ! y方向の変位を ξ方向に変換するための変換行列の要素
+      fish_point_y_to_xi_component = calculate_scalar_at_tracer_position(y_to_xi_component, &
+                                                                         fish_position_i, &
+                                                                         fish_position_j, &
+                                                                         fish_position_xi_in_cell, &
+                                                                         fish_position_eta_in_cell)
+      ! x方向の変位を η方向に変換するための変換行列の要素
+      fish_point_x_to_eta_component = calculate_scalar_at_tracer_position(x_to_eta_component, &
+                                                                          fish_position_i, &
+                                                                          fish_position_j, &
+                                                                          fish_position_xi_in_cell, &
+                                                                          fish_position_eta_in_cell)
+      ! y方向の変位を η方向に変換するための変換行列の要素
+      fish_point_y_to_eta_component = calculate_scalar_at_tracer_position(y_to_eta_component, &
+                                                                          fish_position_i, &
+                                                                          fish_position_j, &
+                                                                          fish_position_xi_in_cell, &
+                                                                          fish_position_eta_in_cell)
+
+      ! 物理座標系での変位を計算
+      displacement_x = (fish_point_y_to_eta_component*displacement_xi - fish_point_y_to_xi_component*displacement_eta)/fish_point_inverse_jacobian
+      displacement_y = (-fish_point_x_to_eta_component*displacement_xi + fish_point_x_to_xi_component*displacement_eta)/fish_point_inverse_jacobian
+
+      ! 魚の初期位置でのアングルを設定(0~2π)
+      fish_angle(fish_index) = mod(atan2(displacement_y, displacement_x) + 2*pi, 2*pi)
+    end do
 
   end subroutine add_fish_tracer
 
@@ -378,35 +450,30 @@ contains
     !==========================================================================================
     call allocate_fish_tracer()
 
-    !=========================================================================================
-    ! 魚のグループ割り当て
-    !=========================================================================================
-    call set_fish_group()
-
     !==========================================================================================
     ! 投入箇所ごとのループ
     !==========================================================================================
     do supply_loop_index_xi = 0, supply_count_xi
 
       ! ξ方向の投入位置を計算
-      supply_position_xi = supply_position_xi_first_fish + supply_interval_xi_fish*supply_loop_index_xi
+      supply_position_xi = supply_position_xi_first + supply_interval_xi*supply_loop_index_xi
 
       ! 投入箇所が範囲外の場合は終了
-      if (supply_position_xi > supply_position_xi_end_fish + tolerance) exit
+      if (supply_position_xi > supply_position_xi_end + tolerance) exit
 
       ! 許容誤差範囲内の場合は補正
-      if (abs(supply_position_xi - supply_position_xi_end_fish) < tolerance) supply_position_xi = supply_position_xi_end_fish
+      if (abs(supply_position_xi - supply_position_xi_end) < tolerance) supply_position_xi = supply_position_xi_end
 
       do supply_loop_index_eta = 0, supply_count_eta
 
         ! η方向の投入位置を計算
-        supply_position_eta = supply_position_eta_first_fish + supply_interval_eta_fish*supply_loop_index_eta
+        supply_position_eta = supply_position_eta_first + supply_interval_eta*supply_loop_index_eta
 
         ! 投入箇所が範囲外の場合はスキップ
-        if (supply_position_eta > supply_position_eta_end_fish) cycle
+        if (supply_position_eta > supply_position_eta_end + tolerance) cycle
 
         ! 許容誤差範囲内の場合は補正
-        if (abs(supply_position_eta - supply_position_eta_end_fish) < tolerance) supply_position_eta = supply_position_eta_end_fish
+        if (abs(supply_position_eta - supply_position_eta_end) < tolerance) supply_position_eta = supply_position_eta_end
 
         !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
         ! 魚トレーサーの座標を設定
@@ -432,6 +499,7 @@ contains
         fish_angle(fish_index) = 0.0
         fish_stay_time_in_critical_depth(fish_index) = 0.0
         fish_group(fish_index) = 0
+        fish_timer(fish_index) = 0.0
         is_fish_alived(fish_index) = 0
       end do
     end if
@@ -462,7 +530,7 @@ contains
     real(8) :: supply_position_eta_in_cell
 
     ! 魚の最大数を読み込む
-    call cg_iric_read_integer(cgnsOut, 'arrangement_fish_number', fish_count_max, is_error)
+    call cg_iric_read_integer(cgnsOut, 'fish_number', fish_count_max, is_error)
 
     !==========================================================================================
     ! Fishトレーサーのパラメーターの初期化
@@ -497,7 +565,7 @@ contains
     !> 割当済みの魚と合計の差分
     integer :: difference
     !> 比率の大きい順にソートするためのインデックス配列
-    integer, allocatable :: sorted_indices(:)
+    integer, dimension(:), allocatable :: sorted_indices
 
     !> 割り当て済みの魚の数
     integer :: assigned_fish_count
@@ -510,19 +578,37 @@ contains
     ! 魚の座標をランダムに設定
     !==========================================================================================
 
+    !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     ! 魚の総数に基づいて各グループの魚の数を計算
+    !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     do group_index = 1, fish_group_count
+
+      ! 割合が0の場合は0を設定
+      if (fish_group_ratio(group_index) == 0) then
+        fish_count_in_group(group_index) = 0
+        cycle
+      end if
       fish_count_in_group(group_index) = int(fish_count*fish_group_ratio(group_index)/sum(fish_group_ratio) + tolerance)
     end do
 
+    !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     ! 差分を計算
+    !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     difference = fish_count - sum(fish_count_in_group)
 
-    ! 差分を割り当てる
+    !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ! 割り振られなかった魚がいる場合、差分を割り当てる
+    ! グループの占める割合の大きい順に余った数を1匹づつ割り当てる
+    !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     if (difference /= 0) then
+
+      ! 比率の大きい順に並べ替えたインデックスを格納する配列を初期化
       allocate (sorted_indices(fish_group_count))
+
+      ! 比率の大きい順に並べ替えたインデックスを取得（元の配列の順番は変更されない）
       call get_sorted_indices(fish_group_ratio, sorted_indices)
 
+      ! 差分が0になるまで繰り返す
       do while (difference /= 0)
         ! 比率の大きい順に差分を割り当て
         do group_index = 1, fish_group_count
@@ -531,7 +617,10 @@ contains
           if (difference == 0) exit
         end do
       end do
+
+      ! ソートしたインデックスのメモリを解放
       deallocate (sorted_indices)
+
     end if
 
     ! それぞれのグループの魚の数を表示
@@ -546,7 +635,9 @@ contains
     ! 割り当て済みの魚の数を初期化
     assigned_fish_count = 0
 
+    !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     ! 各グループの魚を割り当てる
+    !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     do group_index = 1, fish_group_count
       temp_count = 0
       do while (temp_count < fish_count_in_group(group_index))
@@ -573,18 +664,13 @@ contains
         if (assigned_fish_count == fish_count) exit
       end do
     end do
+
   end subroutine set_fish_group
 
   !******************************************************************************************
   ! @brief 投入箇所のチェックおよび再配置
-  ! @param[in] fish_arrangement_method 魚の配置方法
   !******************************************************************************************
-  subroutine check_fish_initial_position(fish_arrangement_method)
-
-    !> @brief 魚の配置方法
-    !> @param 1: 無次元座標で配置する
-    !> @param 2: 総数を与えてランダムに配置する
-    integer :: fish_arrangement_method
+  subroutine check_fish_initial_position()
 
     !> ξ方向投入地点座標
     real(8) :: supply_position_xi
@@ -602,27 +688,80 @@ contains
     real(8) :: supply_position_depth
 
     !> @brief 魚が配置できない場合の処理
-    !> @param 0: 配置不可の箇所で再配置を行わない
-    !> @param 1: 配置不可の箇所で再配置を行う
+    !> @param 0: 障害物セルと水深に関して配置不可の箇所で除去を行う
+    !> @param 1: 障害物セルに関して配置不可の箇所で除去を行う
+    !> @param 2: 障害物セルと水深に関して配置不可の箇所で再配置を行う
+    !> @param 3: 障害物セルに関して配置不可の箇所で再配置を行う
     integer :: fish_handling_unable_to_place
     !> 投入可能かどうかのフラグ
     integer :: is_supplyable = 0
+    !> 各グループで最小水深による再配置が可能かどうかのフラグ
+    integer, dimension(:), allocatable :: is_replacable_by_critical_depth
 
     !> Fishトレーサーのインデックス
     integer :: fish_index
+    !> Fishグループのインデックス
+    integer :: fish_group_index
 
     !==========================================================================================
     ! GUIから条件の読み込み
     !==========================================================================================
     ! 魚の配置方法を読み込む
-    !> 0: 配置不可の箇所で再配置を行わない
-    !> 1: 配置不可の箇所で再配置を行う
+    ! 0: 障害物セルと水深に関して配置不可の箇所で除去を行う
+    ! 1: 障害物セルに関して配置不可の箇所で除去を行う
+    ! 2: 障害物セルと水深に関して配置不可の箇所で再配置を行う
+    ! 3: 障害物セルに関して配置不可の箇所で再配置を行う
     call cg_iric_read_integer(cgnsOut, 'fish_handling_unable_to_place', fish_handling_unable_to_place, is_error)
+
+    !=========================================================================================
+    ! 再配置する場合で、すべて障害物セルの場合は警告をして、プログラムを終了する
+    ! この処理をいれておかないと無限ループに陥る
+    !=========================================================================================
+    if (fish_handling_unable_to_place >= 2) then
+
+      if (minval(obstacle_cell) == 1) then
+        print *, 'Warning: There is no place to place the fish tracers.'
+        write (*, '(a81)') '*********************************** Finish !! ***********************************'
+        call close_cgns()
+        call end_timer()
+        stop
+      end if
+    end if
+
+    !=========================================================================================
+    ! 水深を考慮する場合は初期水深の最小値と各グループの存在可能最小水深を比較し、フラグを立てる
+    ! 全部の箇所で水深が足りない場合は魚の箇所の計算をするのが無駄なので
+    !=========================================================================================
+    if (fish_handling_unable_to_place == 0 .or. fish_handling_unable_to_place == 2) then
+      ! 配列のメモリ確保
+      allocate (is_replacable_by_critical_depth(fish_group_count))
+      do fish_group_index = 1, fish_group_count
+        if (movable_critical_depth_fish(fish_group_index) > maxval(depth_node)) then
+          print '(A,I4)', 'Warning: The minimum depth of the initial water level is less than the critical depth of the fish group ', fish_group_index
+          is_replacable_by_critical_depth(fish_group_index) = 0
+        end if
+      end do
+    end if
 
     !==========================================================================================
     ! 投入箇所のチェック
     !==========================================================================================
     do fish_index = 1, fish_count
+
+      !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      ! 水深を考慮する場合で、当該グループが配置可能箇所がない場合は投入箇所の水深の計算などせず除去
+      !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      if (fish_handling_unable_to_place == 0 .or. fish_handling_unable_to_place == 2) then
+        if (is_replacable_by_critical_depth(fish_group(fish_index)) == 0) then
+
+          is_fish_alived(fish_index) = 0
+
+          ! 除去された魚のインデックス、理由を表示
+          print '(A, I4, A, I4, A)', 'Fish ', fish_index, ' in group ', fish_group(fish_index), ' is removed. Because there was no place with sufficient depth for relocation.'
+          cycle
+
+        end if
+      end if
 
       !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
       ! 投入箇所のセルのインデックス、セル内の座標を計算
@@ -645,39 +784,56 @@ contains
 
       !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
       ! 条件でチェック、再配置および除去
-      ! memo: 最小水深以下の場合で、除去ではなくそのままにする選択肢はいらないのか？
-      !       とりえず初期バージョンとして再配置しない場合は除去するようにしておく
       !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-      if ((obstacle_cell(supply_position_i, supply_position_j) == 1) .or. (supply_position_depth < movable_critical_depth_fish(fish_group(fish_index)))) then
+      if (fish_handling_unable_to_place == 0) then
+        !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        ! 障害物セルまたは最小水深以下の位置に配置された場合は除去
+        !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        ! 障害物による除去
+        if (obstacle_cell(supply_position_i, supply_position_j) == 1) then
 
-        ! 配置不可の箇所で再配置を行わない場合
-        if (fish_handling_unable_to_place == 0) then
+          is_fish_alived(fish_index) = 0
 
-          ! 障害物による除去
-          if (obstacle_cell(supply_position_i, supply_position_j) == 1) then
+          ! 除去された魚のインデックス、座標、理由を表示
+          print '(A, I4, A)', 'Fish ', fish_index, ' is removed because it is placed in the obstacle cell.'
+          print '(A, F8.6, A, F8.6)', 'i = ', supply_position_i, 'j = ', supply_position_j
+          cycle
+        end if
 
-            is_fish_alived(fish_index) = 0
+        ! 最小水深以下による除去
+        if (supply_position_depth < movable_critical_depth_fish(fish_group(fish_index))) then
 
-            ! 除去された魚のインデックス、座標、理由を表示
-            print '(A, I0, A, F10.5, A, F10.5)', 'Fish ', fish_index, ' is removed because it is placed in the obstacle cell.'
-            print '(A, F8.6, A, F8.6)', 'i = ', supply_position_i, 'j = ', supply_position_j
+          is_fish_alived(fish_index) = 0
 
-          end if
+          ! 除去された魚のインデックス、座標、理由を表示
+          print '(A, I4, A, I4,A)', 'Fish ', fish_index, 'in group', fish_group(fish_index), ' is removed because it is placed in the critical depth.'
+          print '(A, F5.2, A, F5.2)', 'Fish point depth = ', supply_position_depth, 'Critical depth = ', movable_critical_depth_fish(fish_group(fish_index))
+          cycle
+        end if
 
-          ! 最小水深以下による除去
-          if (supply_position_depth < movable_critical_depth_fish(fish_group(fish_index))) then
+      else if (fish_handling_unable_to_place == 1) then
+        !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        ! 障害物の箇所に配置された場合のみ除去する（最低水深でもそのまま配置する）
+        !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-            is_fish_alived(fish_index) = 0
+        ! 障害物による除去
+        if (obstacle_cell(supply_position_i, supply_position_j) == 1) then
 
-            ! 除去された魚のインデックス、座標、理由を表示
-            print '(A, I0, A, F10.5, A, F10.5)', 'Fish ', fish_index, ' is removed because it is placed in the critical depth.'
-            print '(A, F8.6, A, F8.6)', 'i = ', supply_position_i, 'j = ', supply_position_j
+          is_fish_alived(fish_index) = 0
 
-          end if
+          ! 除去された魚のインデックス、座標、理由を表示
+          print '(A, I4, A)', 'Fish ', fish_index, ' is removed because it is placed in the obstacle cell.'
+          print '(A, F8.6, A, F8.6)', 'i = ', supply_position_i, 'j = ', supply_position_j
+          cycle
+        end if
 
-          ! 再配置を行う場合
-        else if (fish_handling_unable_to_place == 1) then
+      else if (fish_handling_unable_to_place == 2) then
+        !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        ! 初期位置が障害物セルまたは最小水深以下の場合は再配置
+        !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        if ((obstacle_cell(supply_position_i, supply_position_j) == 1) .or. (supply_position_depth < movable_critical_depth_fish(fish_group(fish_index)))) then
 
+          ! 条件を満たす箇所が見つかるまでランダムで再配置
           do while (is_supplyable == 0)
 
             ! 仮の投入地点を計算
@@ -699,14 +855,51 @@ contains
                                                                         supply_position_xi_in_cell, &
                                                                         supply_position_eta_in_cell)
 
-            ! 投入箇所が障害物セルかチェック
+            ! 投入箇所が障害物セルではなく、最小水深以上の場合はフラグを立ててループを抜ける
             if ((obstacle_cell(supply_position_i, supply_position_j) == 0) .or. (supply_position_depth >= movable_critical_depth_fish(fish_group(fish_index)))) then
               is_supplyable = 1
             end if
 
           end do
 
-          ! フラグをリセット
+          ! 次の魚のためにフラグをリセット
+          is_supplyable = 0
+
+          ! 新しい投入地点を設定
+          fish_coordinate_xi(fish_index) = supply_position_xi
+          fish_coordinate_eta(fish_index) = supply_position_eta
+
+        end if
+
+      else if (fish_handling_unable_to_place == 3) then
+        !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        ! 初期位置が障害物セルの場合は再配置(最低水深はそのまま配置)
+        !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        if (obstacle_cell(supply_position_i, supply_position_j) == 1) then
+
+          ! 条件を満たす箇所が見つかるまでランダムで再配置
+          do while (is_supplyable == 0)
+
+            ! 仮の投入地点を計算
+            call random_number(supply_position_xi)
+            call random_number(supply_position_eta)
+
+            ! 新しい投入箇所のセルのインデックスを調べる
+            call find_tracer_cell_index(supply_position_xi, &
+                                        supply_position_eta, &
+                                        supply_position_i, &
+                                        supply_position_j, &
+                                        supply_position_xi_in_cell, &
+                                        supply_position_eta_in_cell)
+
+            ! 投入箇所が障害物セルではない場合はフラグを立ててループを抜ける
+            if (obstacle_cell(supply_position_i, supply_position_j) == 0) then
+              is_supplyable = 1
+            end if
+
+          end do
+
+          ! 次の魚のためにフラグをリセット
           is_supplyable = 0
 
           ! 新しい投入地点を設定
@@ -716,6 +909,7 @@ contains
         end if
 
       end if
+
     end do
 
   end subroutine check_fish_initial_position
@@ -745,6 +939,11 @@ contains
     real(8) :: xi_in_cell
     !> 魚のセル内η方向座標
     real(8) :: eta_in_cell
+    !> 魚が移動出来たことを示すフラグ
+    integer :: is_moved
+
+    ! フラグを初期化
+    is_moved = 0
 
     if (xi_in_cell < 0.5) then
       !==========================================================================================
@@ -755,45 +954,78 @@ contains
         if (xi_in_cell > eta_in_cell) then
           !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
           ! 領域1にある場合
-          if ((obstacle_cell(i, j - 1) == 0) .and. j > 1) then
-            j = j - 1
-            eta_in_cell = 0.08
-            eta = (j - 1)*grid_interval_eta + eta_in_cell
-          else if ((obstacle_cell(i - 1, j) == 0) .and. i > 1) then
-            i = i - 1
-            xi_in_cell = 0.08
-            xi = (i - 1)*grid_interval_xi + xi_in_cell
-          else if ((obstacle_cell(i - 1, j - 1) == 0) .and. i > 1 .and. j > 1) then
-            i = i - 1
-            xi_in_cell = 0.08
-            xi = (i - 1)*grid_interval_xi + xi_in_cell
-            j = j - 1
-            eta_in_cell = 0.08
-            eta = (j - 1)*grid_interval_eta + eta_in_cell
-          else
+
+          if (j > 1 .and. is_moved == 0) then
+            if (obstacle_cell(i, j - 1) == 0) then
+              j = j - 1
+              eta_in_cell = 0.08
+              eta = (j - 1 + eta_in_cell)*grid_interval_eta
+              is_moved = 1
+            end if
+          end if
+
+          if (i > 1 .and. is_moved == 0) then
+            if (obstacle_cell(i - 1, j) == 0) then
+              i = i - 1
+              xi_in_cell = 0.08
+              xi = (i - 1 + xi_in_cell)*grid_interval_xi
+              is_moved = 1
+            end if
+          end if
+
+          if (i > 1 .and. j > 1 .and. is_moved == 0) then
+            if (obstacle_cell(i - 1, j - 1) == 0) then
+              i = i - 1
+              xi_in_cell = 0.08
+              xi = (i - 1 + xi_in_cell)*grid_interval_xi
+              j = j - 1
+              eta_in_cell = 0.08
+              eta = (j - 1 + eta_in_cell)*grid_interval_eta
+              is_moved = 1
+            end if
+          end if
+
+          if (is_moved == 0) then
             call remove_fish_in_obstacle(fish_index, i, j, xi, eta)
           end if
+
         else if (xi_in_cell <= eta_in_cell) then
           !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
           ! 領域2にある場合
-          if ((obstacle_cell(i - 1, j) == 0) .and. i > 1) then
-            i = i - 1
-            xi_in_cell = 0.08
-            xi = (i - 1)*grid_interval_xi + xi_in_cell
-          else if ((obstacle_cell(i, j - 1) == 0) .and. j > 1) then
-            j = j - 1
-            eta_in_cell = 0.08
-            eta = (j - 1)*grid_interval_eta + eta_in_cell
-          else if ((obstacle_cell(i - 1, j - 1) == 0) .and. i > 1 .and. j > 1) then
-            i = i - 1
-            xi_in_cell = 0.08
-            xi = (i - 1)*grid_interval_xi + xi_in_cell
-            j = j - 1
-            eta_in_cell = 0.08
-            eta = (j - 1)*grid_interval_eta + eta_in_cell
-          else
+          if (i > 1 .and. is_moved == 0) then
+            if (obstacle_cell(i - 1, j) == 0) then
+              i = i - 1
+              xi_in_cell = 0.08
+              xi = (i - 1 + xi_in_cell)*grid_interval_xi
+              is_moved = 1
+            end if
+          end if
+
+          if (j > 1 .and. is_moved == 0) then
+            if (obstacle_cell(i, j - 1) == 0) then
+              j = j - 1
+              eta_in_cell = 0.08
+              eta = (j - 1 + eta_in_cell)*grid_interval_eta
+              is_moved = 1
+            end if
+          end if
+
+          if (i > 1 .and. j > 1 .and. is_moved == 0) then
+            if (obstacle_cell(i - 1, j - 1) == 0) then
+              i = i - 1
+              xi_in_cell = 0.08
+              xi = (i - 1 + xi_in_cell)*grid_interval_xi
+              j = j - 1
+              eta_in_cell = 0.08
+              eta = (j - 1 + eta_in_cell)*grid_interval_eta
+              is_moved = 1
+            end if
+          end if
+
+          if (is_moved == 0) then
             call remove_fish_in_obstacle(fish_index, i, j, xi, eta)
           end if
+
         end if
       else if (eta_in_cell >= 0.5) then
         !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -801,45 +1033,78 @@ contains
         if ((1 - xi_in_cell) > eta_in_cell) then
           !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
           ! 領域3にある場合
-          if ((obstacle_cell(i - 1, j) == 0) .and. i > 1) then
-            i = i - 1
-            xi_in_cell = 0.08
-            xi = (i - 1)*grid_interval_xi + xi_in_cell
-          else if ((obstacle_cell(i, j + 1) == 0) .and. j < cell_count_j) then
-            j = j + 1
-            eta_in_cell = 0.02
-            eta = (j - 1)*grid_interval_eta + eta_in_cell
-          else if ((obstacle_cell(i - 1, j + 1) == 0) .and. i > 1 .and. j < cell_count_j) then
-            i = i - 1
-            xi_in_cell = 0.08
-            xi = (i - 1)*grid_interval_xi + xi_in_cell
-            j = j + 1
-            eta_in_cell = 0.02
-            eta = (j - 1)*grid_interval_eta + eta_in_cell
-          else
+          if (i > 1 .and. is_moved == 0) then
+            if (obstacle_cell(i - 1, j) == 0) then
+              i = i - 1
+              xi_in_cell = 0.08
+              xi = (i - 1 + xi_in_cell)*grid_interval_xi
+              is_moved = 1
+            end if
+          end if
+
+          if (j < cell_count_j .and. is_moved == 0) then
+            if (obstacle_cell(i, j + 1) == 0) then
+              j = j + 1
+              eta_in_cell = 0.02
+              eta = (j - 1 + eta_in_cell)*grid_interval_eta
+              is_moved = 1
+            end if
+          end if
+
+          if (i > 1 .and. j < cell_count_j .and. is_moved == 0) then
+            if (obstacle_cell(i - 1, j + 1) == 0) then
+              i = i - 1
+              xi_in_cell = 0.08
+              xi = (i - 1 + xi_in_cell)*grid_interval_xi
+              j = j + 1
+              eta_in_cell = 0.02
+              eta = (j - 1 + eta_in_cell)*grid_interval_eta
+              is_moved = 1
+            end if
+          end if
+
+          if (is_moved == 0) then
             call remove_fish_in_obstacle(fish_index, i, j, xi, eta)
           end if
+
         else if ((1 - xi_in_cell) <= eta_in_cell) then
           !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
           ! 領域4にある場合
-          if (obstacle_cell(i, j + 1) == 0 .and. j < cell_count_j) then
-            j = j + 1
-            eta_in_cell = 0.02
-            eta = (j - 1)*grid_interval_eta + eta_in_cell
-          else if (obstacle_cell(i - 1, j) == 0 .and. i > 1) then
-            i = i - 1
-            xi_in_cell = 0.08
-            xi = (i - 1)*grid_interval_xi + xi_in_cell
-          else if (obstacle_cell(i - 1, j + 1) == 0 .and. i > 1 .and. j < cell_count_j) then
-            i = i - 1
-            xi_in_cell = 0.08
-            xi = (i - 1)*grid_interval_xi + xi_in_cell
-            j = j + 1
-            eta_in_cell = 0.02
-            eta = (j - 1)*grid_interval_eta + eta_in_cell
-          else
+
+          if (j < cell_count_j .and. is_moved == 0) then
+            if (obstacle_cell(i, j + 1) == 0) then
+              j = j + 1
+              eta_in_cell = 0.02
+              eta = (j - 1 + eta_in_cell)*grid_interval_eta
+              is_moved = 1
+            end if
+          end if
+
+          if (i > 1 .and. is_moved == 0) then
+            if (obstacle_cell(i - 1, j) == 0) then
+              i = i - 1
+              xi_in_cell = 0.08
+              xi = (i - 1 + xi_in_cell)*grid_interval_xi
+              is_moved = 1
+            end if
+          end if
+
+          if (i > 1 .and. j < cell_count_j .and. is_moved == 0) then
+            if (obstacle_cell(i - 1, j + 1) == 0) then
+              i = i - 1
+              xi_in_cell = 0.08
+              xi = (i - 1 + xi_in_cell)*grid_interval_xi
+              j = j + 1
+              eta_in_cell = 0.02
+              eta = (j - 1 + eta_in_cell)*grid_interval_eta
+              is_moved = 1
+            end if
+          end if
+
+          if (is_moved == 0) then
             call remove_fish_in_obstacle(fish_index, i, j, xi, eta)
           end if
+
         end if
       end if
     else if (xi_in_cell >= 0.5) then
@@ -851,45 +1116,79 @@ contains
         if ((xi_in_cell - 1) > eta_in_cell) then
           !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
           ! 領域5にある場合
-          if (obstacle_cell(i, j - 1) == 0 .and. j > 1) then
-            j = j - 1
-            eta_in_cell = 0.08
-            eta = (j - 1)*grid_interval_eta + eta_in_cell
-          else if (obstacle_cell(i + 1, j) == 0 .and. i < cell_count_i) then
-            i = i + 1
-            xi_in_cell = 0.02
-            xi = (i - 1)*grid_interval_xi + xi_in_cell
-          else if (obstacle_cell(i + 1, j - 1) == 0 .and. i < cell_count_i .and. j > 1) then
-            i = i + 1
-            xi_in_cell = 0.02
-            xi = (i - 1)*grid_interval_xi + xi_in_cell
-            j = j - 1
-            eta_in_cell = 0.08
-            eta = (j - 1)*grid_interval_eta + eta_in_cell
-          else
+
+          if (j > 1 .and. is_moved == 0) then
+            if (obstacle_cell(i, j - 1) == 0) then
+              j = j - 1
+              eta_in_cell = 0.08
+              eta = (j - 1 + eta_in_cell)*grid_interval_eta
+              is_moved = 1
+            end if
+          end if
+
+          if (i < cell_count_i .and. is_moved == 0) then
+            if (obstacle_cell(i + 1, j) == 0) then
+              i = i + 1
+              xi_in_cell = 0.02
+              xi = (i - 1 + xi_in_cell)*grid_interval_xi
+              is_moved = 1
+            end if
+          end if
+
+          if (i < cell_count_i .and. j > 1 .and. is_moved == 0) then
+            if (obstacle_cell(i + 1, j - 1) == 0) then
+              i = i + 1
+              xi_in_cell = 0.02
+              xi = (i - 1 + xi_in_cell)*grid_interval_xi
+              j = j - 1
+              eta_in_cell = 0.08
+              eta = (j - 1 + eta_in_cell)*grid_interval_eta
+              is_moved = 1
+            end if
+          end if
+
+          if (is_moved == 0) then
             call remove_fish_in_obstacle(fish_index, i, j, xi, eta)
           end if
+
         else if ((xi_in_cell - 1) <= eta_in_cell) then
           !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
           ! 領域6にある場合
-          if (obstacle_cell(i + 1, j) == 0 .and. i < cell_count_i) then
-            i = i + 1
-            xi_in_cell = 0.02
-            xi = (i - 1)*grid_interval_xi + xi_in_cell
-          else if (obstacle_cell(i, j - 1) == 0 .and. j > 1) then
-            j = j - 1
-            eta_in_cell = 0.08
-            eta = (j - 1)*grid_interval_eta + eta_in_cell
-          else if (obstacle_cell(i + 1, j - 1) == 0 .and. i < cell_count_i .and. j > 1) then
-            i = i + 1
-            xi_in_cell = 0.02
-            xi = (i - 1)*grid_interval_xi + xi_in_cell
-            j = j - 1
-            eta_in_cell = 0.08
-            eta = (j - 1)*grid_interval_eta + eta_in_cell
-          else
+
+          if (i < cell_count_i .and. is_moved == 0) then
+            if (obstacle_cell(i + 1, j) == 0) then
+              i = i + 1
+              xi_in_cell = 0.02
+              xi = (i - 1 + xi_in_cell)*grid_interval_xi
+              is_moved = 1
+            end if
+          end if
+
+          if (j > 1 .and. is_moved == 0) then
+            if (obstacle_cell(i, j - 1) == 0) then
+              j = j - 1
+              eta_in_cell = 0.08
+              eta = (j - 1 + eta_in_cell)*grid_interval_eta
+              is_moved = 1
+            end if
+          end if
+
+          if (i < cell_count_i .and. j > 1 .and. is_moved == 0) then
+            if (obstacle_cell(i + 1, j - 1) == 0) then
+              i = i + 1
+              xi_in_cell = 0.02
+              xi = (i - 1 + xi_in_cell)*grid_interval_xi
+              j = j - 1
+              eta_in_cell = 0.08
+              eta = (j - 1 + eta_in_cell)*grid_interval_eta
+              is_moved = 1
+            end if
+          end if
+
+          if (is_moved == 0) then
             call remove_fish_in_obstacle(fish_index, i, j, xi, eta)
           end if
+
         end if
       else if (eta_in_cell >= 0.5) then
         !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -897,45 +1196,79 @@ contains
         if (xi_in_cell > eta_in_cell) then
           !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
           ! 領域7にある場合
-          if (obstacle_cell(i + 1, j) == 0 .and. i < cell_count_i) then
-            i = i + 1
-            xi_in_cell = 0.02
-            xi = (i - 1)*grid_interval_xi + xi_in_cell
-          else if (obstacle_cell(i, j + 1) == 0 .and. j < cell_count_j) then
-            j = j + 1
-            eta_in_cell = 0.02
-            eta = (j - 1)*grid_interval_eta + eta_in_cell
-          else if (obstacle_cell(i + 1, j + 1) == 0 .and. i < cell_count_i .and. j < cell_count_j) then
-            i = i + 1
-            xi_in_cell = 0.02
-            xi = (i - 1)*grid_interval_xi + xi_in_cell
-            j = j + 1
-            eta_in_cell = 0.02
-            eta = (j - 1)*grid_interval_eta + eta_in_cell
-          else
+
+          if (i < cell_count_i .and. is_moved == 0) then
+            if (obstacle_cell(i + 1, j) == 0) then
+              i = i + 1
+              xi_in_cell = 0.02
+              xi = (i - 1 + xi_in_cell)*grid_interval_xi
+              is_moved = 1
+            end if
+          end if
+
+          if (j < cell_count_j .and. is_moved == 0) then
+            if (obstacle_cell(i, j + 1) == 0) then
+              j = j + 1
+              eta_in_cell = 0.02
+              eta = (j - 1 + eta_in_cell)*grid_interval_eta
+              is_moved = 1
+            end if
+          end if
+
+          if (i < cell_count_i .and. j < cell_count_j .and. is_moved == 0) then
+            if (obstacle_cell(i + 1, j + 1) == 0) then
+              i = i + 1
+              xi_in_cell = 0.02
+              xi = (i - 1 + xi_in_cell)*grid_interval_xi
+              j = j + 1
+              eta_in_cell = 0.02
+              eta = (j - 1 + eta_in_cell)*grid_interval_eta
+              is_moved = 1
+            end if
+          end if
+
+          if (is_moved == 0) then
             call remove_fish_in_obstacle(fish_index, i, j, xi, eta)
           end if
+
         else if (xi_in_cell <= eta_in_cell) then
           !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
           ! 領域8にある場合
-          if (obstacle_cell(i, j + 1) == 0 .and. j < cell_count_j) then
-            j = j + 1
-            eta_in_cell = 0.02
-            eta = (j - 1)*grid_interval_eta + eta_in_cell
-          else if (obstacle_cell(i + 1, j) == 0 .and. i < cell_count_i) then
-            i = i + 1
-            xi_in_cell = 0.02
-            xi = (i - 1)*grid_interval_xi + xi_in_cell
-          else if (obstacle_cell(i + 1, j + 1) == 0 .and. i < cell_count_i .and. j < cell_count_j) then
-            i = i + 1
-            xi_in_cell = 0.02
-            xi = (i - 1)*grid_interval_xi + xi_in_cell
-            j = j + 1
-            eta_in_cell = 0.02
-            eta = (j - 1)*grid_interval_eta + eta_in_cell
-          else
+
+          if (j < cell_count_j .and. is_moved == 0) then
+            if (obstacle_cell(i, j + 1) == 0) then
+              j = j + 1
+              eta_in_cell = 0.02
+              eta = (j - 1 + eta_in_cell)*grid_interval_eta
+              is_moved = 1
+            end if
+          end if
+
+          if (i < cell_count_i .and. is_moved == 0) then
+            if (obstacle_cell(i + 1, j) == 0) then
+              i = i + 1
+              xi_in_cell = 0.02
+              xi = (i - 1 + xi_in_cell)*grid_interval_xi
+              is_moved = 1
+            end if
+          end if
+
+          if (i < cell_count_i .and. j < cell_count_j .and. is_moved == 0) then
+            if (obstacle_cell(i + 1, j + 1) == 0) then
+              i = i + 1
+              xi_in_cell = 0.02
+              xi = (i - 1 + xi_in_cell)*grid_interval_xi
+              j = j + 1
+              eta_in_cell = 0.02
+              eta = (j - 1 + eta_in_cell)*grid_interval_eta
+              is_moved = 1
+            end if
+          end if
+
+          if (is_moved == 0) then
             call remove_fish_in_obstacle(fish_index, i, j, xi, eta)
           end if
+
         end if
       end if
     end if
@@ -984,16 +1317,44 @@ contains
     fish_stay_time_in_critical_depth(fish_index) = fish_stay_time_in_critical_depth(fish_index) + time_interval_for_tracking
 
     ! 固有タイマーが最小水深での挙動をする時間を超えた場合は通常時に戻す
-    if (fish_stay_time_in_critical_depth(fish_index) >= fish_stay_time_in_critical_depth_max(fish_group(fish_index))) then
+    if (fish_stay_time_in_critical_depth(fish_index) >= behavior_time_in_critical_depth(fish_group(fish_index))) then
       fish_stay_time_in_critical_depth(fish_index) = 0.0
     end if
 
   end subroutine update_fish_timer
 
   !******************************************************************************************
-  ! @brief 魚トレーサーの位置を更新する
+  ! @brief 任意断面を通過した魚の数を増減させるサブルーチン
+  ! @param[in] previous_i 移動前の魚が存在するセルのインデックス
+  ! @param[in] moved_i 移動後の魚が存在するセルのインデックス
   !******************************************************************************************
-  subroutine move_fish_tracer()
+  subroutine count_fish_crossing_section(previous_i, moved_i)
+
+    !> 移動前の魚が存在するセルのインデックス
+    integer :: previous_i
+    !> 移動後の魚が存在するセルのインデックス
+    integer :: moved_i
+
+    ! 下流から上流へ通過した場合は増加する
+    if (previous_i >= count_section_position .and. moved_i < count_section_position) then
+      passed_fish_count = passed_fish_count + 1
+    end if
+
+    ! 上流から下流へ通過した場合は減少する
+    if (previous_i < count_section_position .and. moved_i >= count_section_position) then
+      passed_fish_count = passed_fish_count - 1
+    end if
+
+  end subroutine count_fish_crossing_section
+
+  !******************************************************************************************
+  ! @brief 魚トレーサーの位置を更新する
+  ! @param[in] time_trace 一度トレーサーが移動した後の時刻
+  !******************************************************************************************
+  subroutine move_fish_tracer(time_trace)
+
+    !> 一度トレーサーが移動した後の時刻
+    real(8), intent(in) :: time_trace
 
     !> 魚のインデックス
     integer :: fish_index
@@ -1014,14 +1375,14 @@ contains
     real(8) :: fish_point_velocity_y
     !> 移動前の魚の位置の流速の絶対値
     real(8) :: fish_point_velocity_magunitude
-    !> ξ方向の変位を x方向に変換するための変換行列の要素
-    real(8) :: fish_point_xi_to_x_component
-    !> ξ方向の変位を y方向に変換するための変換行列の要素
-    real(8) :: fish_point_xi_to_y_component
-    !> η方向の変位を x方向に変換するための変換行列の要素
-    real(8) :: fish_point_eta_to_x_component
-    !> η方向の変位を y方向に変換するための変換行列の要素
-    real(8) :: fish_point_eta_to_y_component
+    !> x方向の変位を ξ方向に変換するための変換行列の要素
+    real(8) :: fish_point_x_to_xi_component
+    !> y方向の変位を ξ方向に変換するための変換行列の要素
+    real(8) :: fish_point_y_to_xi_component
+    !> x方向の変位を η方向に変換するための変換行列の要素
+    real(8) :: fish_point_x_to_eta_component
+    !> y方向の変位を η方向に変換するための変換行列の要素
+    real(8) :: fish_point_y_to_eta_component
     !> 魚のポイントの流向
     real(8) :: fish_point_flow_angle
 
@@ -1046,6 +1407,8 @@ contains
     real(8) :: diffusion_move_speed_x
     !> ランダムウォークによる移動の速度
     real(8) :: diffusion_move_speed_y
+    !> ランダムウォークによる移動距離の標準偏差
+    real(8) :: diffusion_std_dev
     !> 魚の泳ぐ速度
     real(8) :: fish_swim_speed
     !> 魚の泳ぐ速度
@@ -1084,7 +1447,7 @@ contains
       is_fish_in_critical_depth = 0
 
       ! 魚の挙動フラグをチェック
-      if (fish_stay_time_in_critical_depth(fish_index) > 0.0 .and. fish_stay_time_in_critical_depth(fish_index) < fish_stay_time_in_critical_depth_max(fish_group(fish_index))) then
+      if (fish_stay_time_in_critical_depth(fish_index) > 0.0 .and. fish_stay_time_in_critical_depth(fish_index) < behavior_time_in_critical_depth(fish_group(fish_index))) then
         is_fish_in_critical_depth = 1
       end if
 
@@ -1100,16 +1463,16 @@ contains
                                   fish_position_eta_in_cell)
 
       ! 移動前の魚の位置の水深を計算
-      fish_position_depth = calculate_scalar_at_tracer_position(depth_node, &
-                                                                fish_position_i, &
-                                                                fish_position_j, &
-                                                                fish_position_xi_in_cell, &
-                                                                fish_position_eta_in_cell)
+      fish_point_depth = calculate_scalar_at_tracer_position(depth_node, &
+                                                             fish_position_i, &
+                                                             fish_position_j, &
+                                                             fish_position_xi_in_cell, &
+                                                             fish_position_eta_in_cell)
 
       !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
       ! 移動前の魚の位置で最小水深以下の場合の処理
       !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-      if (fish_position_depth < movable_critical_depth_fish(fish_group(fish_index))) then
+      if (fish_point_depth < movable_critical_depth_fish(fish_group(fish_index))) then
         if (fish_handling_in_critical_depth(fish_group(fish_index)) == 0) then ! その場から動かない場合
 
           ! 魚の向きは更新しない
@@ -1140,6 +1503,9 @@ contains
         end if
       end if
 
+      !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      ! 移動前の魚の位置での流速(物理座標)を計算
+      !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
       ! 魚の位置の流速を計算(物理座標)
       fish_point_velocity_x = calculate_scalar_at_tracer_position(velocity_x_node, &
                                                                   fish_position_i, &
@@ -1157,31 +1523,31 @@ contains
 
       ! 物理座標における魚の位置の流向を計算(0~2π)
       if (fish_point_velocity_magunitude /= 0.0) then
-        fish_point_flow_angle = atan2(fish_point_velocity_y, fish_point_velocity_x) + pi
+        fish_point_flow_angle = mod(atan2(fish_point_velocity_y, fish_point_velocity_x) + 2*pi, 2*pi)
       else
         fish_point_flow_angle = fish_angle(fish_index)
       end if
 
-      ! ξ方向の変位を x方向に変換するための変換行列の要素
-      fish_point_xi_to_x_component = calculate_scalar_at_tracer_position(xi_to_x_component, &
+      ! x方向の変位を ξ方向に変換するための変換行列の要素
+      fish_point_x_to_xi_component = calculate_scalar_at_tracer_position(x_to_xi_component, &
                                                                          fish_position_i, &
                                                                          fish_position_j, &
                                                                          fish_position_xi_in_cell, &
                                                                          fish_position_eta_in_cell)
-      ! ξ方向の変位を y方向に変換するための変換行列の要素
-      fish_point_xi_to_y_component = calculate_scalar_at_tracer_position(xi_to_y_component, &
+      ! y方向の変位を ξ方向に変換するための変換行列の要素
+      fish_point_y_to_xi_component = calculate_scalar_at_tracer_position(y_to_xi_component, &
                                                                          fish_position_i, &
                                                                          fish_position_j, &
                                                                          fish_position_xi_in_cell, &
                                                                          fish_position_eta_in_cell)
-      ! η方向の変位を x方向に変換するための変換行列の要素
-      fish_point_eta_to_x_component = calculate_scalar_at_tracer_position(eta_to_x_component, &
+      ! x方向の変位を η方向に変換するための変換行列の要素
+      fish_point_x_to_eta_component = calculate_scalar_at_tracer_position(x_to_eta_component, &
                                                                           fish_position_i, &
                                                                           fish_position_j, &
                                                                           fish_position_xi_in_cell, &
                                                                           fish_position_eta_in_cell)
-      ! η方向の変位を y方向に変換するための変換行列の要素
-      fish_point_eta_to_y_component = calculate_scalar_at_tracer_position(eta_to_y_component, &
+      ! y方向の変位を η方向に変換するための変換行列の要素
+      fish_point_y_to_eta_component = calculate_scalar_at_tracer_position(y_to_eta_component, &
                                                                           fish_position_i, &
                                                                           fish_position_j, &
                                                                           fish_position_xi_in_cell, &
@@ -1291,8 +1657,8 @@ contains
       !==========================================================================================
 
       ! 一般座標における魚の速度を計算
-      fish_net_speed_xi = fish_point_xi_to_x_component*fish_net_speed_x + fish_point_xi_to_y_component*fish_net_speed_y
-      fish_net_speed_eta = fish_point_eta_to_x_component*fish_net_speed_x + fish_point_eta_to_y_component*fish_net_speed_y
+      fish_net_speed_xi = fish_point_x_to_xi_component*fish_net_speed_x + fish_point_y_to_xi_component*fish_net_speed_y
+      fish_net_speed_eta = fish_point_x_to_eta_component*fish_net_speed_x + fish_point_y_to_eta_component*fish_net_speed_y
 
       ! 移動後の魚の一般座標を計算
       moved_position_xi = fish_coordinate_xi(fish_index) + fish_net_speed_xi*time_interval_for_tracking
@@ -1427,8 +1793,8 @@ contains
         !------------------------------------------------------------------------------------------
 
         ! 一般座標における魚の速度を計算
-        fish_net_speed_xi = fish_point_xi_to_x_component*fish_net_speed_x + fish_point_xi_to_y_component*fish_net_speed_y
-        fish_net_speed_eta = fish_point_eta_to_x_component*fish_net_speed_x + fish_point_eta_to_y_component*fish_net_speed_y
+        fish_net_speed_xi = fish_point_x_to_xi_component*fish_net_speed_x + fish_point_y_to_xi_component*fish_net_speed_y
+        fish_net_speed_eta = fish_point_x_to_eta_component*fish_net_speed_x + fish_point_y_to_eta_component*fish_net_speed_y
 
         ! 移動後の魚の一般座標を計算
         moved_position_xi = fish_coordinate_xi(fish_index) + fish_net_speed_xi*time_interval_for_tracking
@@ -1489,14 +1855,22 @@ contains
       fish_coordinate_xi(fish_index) = moved_position_xi
       fish_coordinate_eta(fish_index) = moved_position_eta
 
+      !==========================================================================================
+      ! 任意断面を通過した魚の数をカウントする場合の処理
+      !==========================================================================================
+      if (is_count_fish == 1) then
+        if (count_time_start <= time_trace + tolerance .and. time_trace <= count_time_end + tolerance) then
+          call count_fish_crossing_section(fish_position_i, moved_position_i)
+        end if
+      end if
     end do
 
   end subroutine move_fish_tracer
 
   !******************************************************************************************
-  ! @brief 魚のポリゴンを出力する
+  ! @brief 魚のポリゴン形状、各魚の持つ属性の出力
   !******************************************************************************************
-  subroutine output_fish_polygon()
+  subroutine output_fish()
 
     !> 魚のインデックス
     integer :: fish_index
@@ -1512,27 +1886,100 @@ contains
     real(8) :: fish_position_xi_in_cell
     !> 魚の存在するセル内のη方向座標
     real(8) :: fish_position_eta_in_cell
+    !> 生存可能な魚の数
+    integer :: fish_count_alived
 
-    ! 魚の存在するセルのインデックス、セル内の座標を計算
-    call find_tracer_cell_index(fish_coordinate_xi(fish_index), &
-                                fish_coordinate_eta(fish_index), &
-                                fish_position_i, &
-                                fish_position_j, &
-                                fish_position_xi_in_cell, &
-                                fish_position_eta_in_cell)
+    !==========================================================================================
+    ! 魚のポリゴン形状、各魚の持つ属性の出力
+    !==========================================================================================
+    call cg_iric_write_sol_polydata_groupbegin(cgnsOut, "Fish", is_error)
 
-    ! 魚の位置の物理座標を計算
-    fish_position_x = transform_general_to_physical(fish_position_i, &
-                                                    fish_position_j, &
-                                                    fish_position_xi_in_cell, &
-                                                    fish_position_eta_in_cell, &
-                                                    fish_position_x, &
-                                                    fish_position_y)
+    ! 生存魚数のカウンターをリセット
+    fish_count_alived = 0
 
-    ! 魚のポリゴンの形状を計算
-    call make_fish_outline(fish_index, fish_position_x, fish_position_y)
+    do fish_index = 1, fish_count
 
-  end subroutine output_fish_polygon
+      ! 魚の生存フラグが立っていない場合はスキップ
+      if (is_fish_alived(fish_index) == 0) cycle
+
+      ! 生存魚数をカウント
+      fish_count_alived = fish_count_alived + 1
+
+      !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      ! 魚の物理座標を計算してポリゴンの座標を計算・出力
+      !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      ! 魚の存在するセルのインデックス、セル内の座標を計算
+      call find_tracer_cell_index(fish_coordinate_xi(fish_index), &
+                                  fish_coordinate_eta(fish_index), &
+                                  fish_position_i, &
+                                  fish_position_j, &
+                                  fish_position_xi_in_cell, &
+                                  fish_position_eta_in_cell)
+
+      ! 魚の位置の物理座標を計算
+      call transform_general_to_physical(fish_position_i, &
+                                         fish_position_j, &
+                                         fish_position_xi_in_cell, &
+                                         fish_position_eta_in_cell, &
+                                         fish_position_x, &
+                                         fish_position_y)
+
+      ! 魚のポリゴンの形状を計算
+      call make_fish_outline(fish_index, fish_position_x, fish_position_y)
+
+      ! 魚のポリゴンを出力
+      call cg_iric_write_sol_polydata_polygon(cgnsOut, fish_outline_point_count, fish_outline_x, fish_outline_y, is_error)
+
+      !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      ! 魚の属性を出力
+      !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      ! 魚の泳ぎのモードを計算して出力
+      !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      ! 魚の泳ぎのモードを判定
+      ! 遊泳状態の場合は魚の泳ぎのモードを0、突進状態の場合は1
+      if (mod(fish_timer(fish_index), fish_cycle_time(fish_group(fish_index))) + tolerance <= fish_cruise_time(fish_group(fish_index))) then
+        call cg_iric_write_sol_polydata_integer(cgnsOut, "Swim Mode", 0, is_error)
+      else
+        call cg_iric_write_sol_polydata_integer(cgnsOut, "Swim Mode", 1, is_error)
+      end if
+
+      !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      ! 魚が移動後の時点で最小水深以下での挙動を行うかのフラグを出力
+      ! 魚が最小水深以下の挙動を行う場合は1、そうでない場合は0
+      !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      if (fish_stay_time_in_critical_depth(fish_index) > 0) then
+        call cg_iric_write_sol_polydata_integer(cgnsOut, "under critical depth mode", 1, is_error)
+      else
+        call cg_iric_write_sol_polydata_integer(cgnsOut, "under critical depth mode", 0, is_error)
+      end if
+
+      !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      ! 魚のグループインデックスを出力
+      !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      call cg_iric_write_sol_polydata_integer(cgnsOut, "Fish Group", fish_group(fish_index), is_error)
+
+      !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      ! 魚のインデックスを出力（とりあえずデバッグ用として出しておく）
+      !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      call cg_iric_write_sol_polydata_integer(cgnsOut, "Fish Index", fish_index, is_error)
+
+    end do
+
+    ! 魚のポリゴンのグループの出力終了を宣言
+    call cg_iric_write_sol_polydata_groupend(cgnsOut, is_error)
+
+    !==========================================================================================
+    ! 統計など時系列で単一の属性を出力
+    !==========================================================================================
+    ! 生存魚数を出力
+    call cg_iric_write_sol_baseiterative_integer(cgnsOut, "Number of Alived Fish", fish_count_alived, is_error)
+    ! 任意断面を通過した魚の数を出力
+    if (is_count_fish == 1) then
+      call cg_iric_write_sol_baseiterative_integer(cgnsOut, "Number of Fish passed through the section", passed_fish_count, is_error)
+    end if
+
+  end subroutine output_fish
 
   !******************************************************************************************
   ! @brief 魚のポリゴン形状を計算する

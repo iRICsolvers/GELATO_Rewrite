@@ -5,6 +5,7 @@ program gelate
   use grid
   use result
   use trace
+  use fish_module
   use timer_module
 
   implicit none
@@ -97,6 +98,7 @@ program gelate
   if (is_trace_primary == 1 .or. is_trace_secondary == 1) call Initialize_Normal_Tracer()
   if (is_trace_trajectory == 1) call Initialize_Trajectory_Tracer()
   if (is_draw_windmap == 1) call Initialize_windmap()
+  if (is_simulation_fish == 1) call initialize_fish_tracer()
 
   !******************************************************************************************
   ! 初期状態の計算、アウトプット
@@ -172,6 +174,11 @@ program gelate
   if (is_draw_windmap == 1) call update_windmap()
 
   !==========================================================================================
+  ! 魚を投入
+  !==========================================================================================
+  if (is_simulation_fish == 1) call add_fish_tracer()
+
+  !==========================================================================================
   ! 初期状態アウトプット
   !==========================================================================================
   call cg_iric_write_sol_start(cgnsOut, is_error)
@@ -195,6 +202,8 @@ program gelate
   if (is_trace_trajectory == 1) call write_sol_trajectory_tracer(trajectory)
   ! windmapの出力
   if (is_draw_windmap == 1) call write_sol_windmap()
+  ! 魚の出力
+  if (is_simulation_fish == 1) call output_fish()
 
   call cg_iric_write_sol_end(cgnsOut, is_error)
 
@@ -304,10 +313,11 @@ program gelate
         !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         do time_step_trace = 1, tracking_count
 
-          ! 経過時間
-          time_since_start = time_out_previous + time_interval_for_tracking*time_step_trace - time_out_initial
           ! トレーサーを1回追跡した後の時刻
           time_trace = time_out_previous + time_interval_for_tracking*time_step_trace
+          ! 経過時間
+          time_since_start = time_trace - time_out_initial
+
           ! トレーサー追加のカウンター更新
           call increment_real_value(time_counter_add_normal_tracer, time_interval_for_tracking)
 
@@ -317,6 +327,7 @@ program gelate
           ! 通常トレーサーの移動
           if (is_trace_primary == 1 .and. primary%total_tracer_number > 0) call move_normal_tracer(primary)
           if (is_trace_secondary == 1 .and. secondary%total_tracer_number > 0) call move_normal_tracer(secondary)
+
           ! 軌跡追跡トレーサーの移動
           if (is_trace_trajectory == 1 .and. trajectory%total_tracer_number > 0) call move_trajectory_tracer(trajectory)
 
@@ -342,6 +353,11 @@ program gelate
           ! WindMapの更新
           !------------------------------------------------------------------------------------------
           if (is_draw_windmap == 1) call update_windmap()
+
+          !------------------------------------------------------------------------------------------
+          ! 魚の移動
+          !------------------------------------------------------------------------------------------
+          if (is_simulation_fish == 1) call move_fish_tracer(time_trace)
 
         end do !time_step_trace = 1, tracking_count
 
@@ -377,6 +393,8 @@ program gelate
         if (is_trace_trajectory == 1) call write_sol_trajectory_tracer(trajectory)
         ! windmapの出力
         if (is_draw_windmap == 1) call write_sol_windmap()
+        ! 魚の出力
+        if (is_simulation_fish == 1) call output_fish()
 
       end if
 
