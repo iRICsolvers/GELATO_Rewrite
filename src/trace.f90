@@ -2103,6 +2103,9 @@ contains
 
     integer:: i
 
+    !> windmapトレーサーが追加されてからの時間をバラつかせるための乱数
+    real(8) :: random_number_for_timer
+
     !==========================================================================================
     ! トレーサー追加先の座標を障害物ではないランダムな場所から探す
     !==========================================================================================
@@ -2139,8 +2142,9 @@ contains
     !==========================================================================================
     ! windmap_save_timesを更新
     windmap%windmap_save_times(tracer_index) = 1
-    ! windmap_save_timerをリセット
-    windmap%windmap_save_timer(tracer_index) = 0.0
+    ! windmap_save_timerをリセット(一度に投入されたトレーサーが同じタイミングで消えるのを防ぐため)
+    call random_number(random_number_for_timer)
+    windmap%windmap_save_timer(tracer_index) = random_number_for_timer*windmap%life_time
     ! windmap_coordinate_x, windmap_coordinate_yをリセット
     windmap%windmap_coordinate_x(:, tracer_index) = 0.0
     windmap%windmap_coordinate_y(:, tracer_index) = 0.0
