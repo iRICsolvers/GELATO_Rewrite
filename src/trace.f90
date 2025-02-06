@@ -1,5 +1,6 @@
 module trace
   use iric
+  use common
   use grid
   use result
 
@@ -16,17 +17,17 @@ module trace
   !******************************************************************************************
 
   !> 通常トレーサーの散布開始時間
-  double precision:: supply_time_start_normal_tracers = 0.0
+  real(8):: supply_time_start_normal_tracers = 0.0
   !> 通常トレーサーの散布終了時間
-  double precision:: supply_time_end_normal_tracers = 0.0
+  real(8):: supply_time_end_normal_tracers = 0.0
   !> 通常トレーサーの散布時間間隔
-  double precision:: supply_time_interval_normal_tracers = 99999.0
+  real(8):: supply_time_interval_normal_tracers = 99999.0
   !> 通常トレーサーの周期境界条件
   integer:: is_periodic_boundary_condition_Tracers
   !> 停止したトレーサーの扱い 1:その場で留まる 2:除去する
   integer:: stopped_tracer_handling
   !> トレーサー追加のタイムカウンター
-  double precision :: time_counter_add_normal_tracer
+  real(8) :: time_counter_add_normal_tracer
 
   type :: tracer_base
 
@@ -37,41 +38,41 @@ module trace
     ! GUIから読み込む値
     !------------------------------------------------------------------------------------------
     !> 移動限界水深
-    double precision:: Movable_Critical_depth
+    real(8):: Movable_Critical_depth
     !> 移動限界摩擦速度
-    double precision:: Movable_Critical_u_star
+    real(8):: Movable_Critical_u_star
     !> トレーサー補足壁の高さ
-    double precision:: trap_wall_height
+    real(8):: trap_wall_height
     !> トレーサー捕捉率
-    double precision:: trap_rate
+    real(8):: trap_rate
     !> ξ方向配置始点
-    double precision:: supply_position_xi_first
+    real(8):: supply_position_xi_first
     !> ξ方向配置終点
-    double precision:: supply_position_xi_end
+    real(8):: supply_position_xi_end
     !> ξ方向配置間隔
-    double precision:: supply_interval_xi
+    real(8):: supply_interval_xi
     !> η方向配置始点
-    double precision:: supply_position_eta_first
+    real(8):: supply_position_eta_first
     !> η方向配置終点
-    double precision:: supply_position_eta_end
+    real(8):: supply_position_eta_end
     !> η方向配置間隔
-    double precision:: supply_interval_eta
+    real(8):: supply_interval_eta
 
     !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     ! トレーサーの属性
     !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     !> トレーサーのξ座標
-    double precision, dimension(:), allocatable :: tracer_coordinate_xi
+    real(8), dimension(:), allocatable :: tracer_coordinate_xi
     !> トレーサーのη座標
-    double precision, dimension(:), allocatable :: tracer_coordinate_eta
+    real(8), dimension(:), allocatable :: tracer_coordinate_eta
     !> トレーサーのあるセルインデックス
     integer, dimension(:), allocatable :: cell_index_i
     !> トレーサーのあるセルインデックス
     integer, dimension(:), allocatable :: cell_index_j
     !> セル内でのトレーサーのξ座標
-    double precision, dimension(:), allocatable :: tracer_coordinate_xi_in_cell
+    real(8), dimension(:), allocatable :: tracer_coordinate_xi_in_cell
     !> セル内でのトレーサーのη座標
-    double precision, dimension(:), allocatable :: tracer_coordinate_eta_in_cell
+    real(8), dimension(:), allocatable :: tracer_coordinate_eta_in_cell
     !> トレーサーが動くことができるか
     integer, dimension(:), allocatable :: is_tracer_movable
     !> トレーサーがトラップにとらわれているか
@@ -112,7 +113,7 @@ module trace
     ! トレーサーの属性
     !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     !> トレーサーの重み
-    double precision, dimension(:), allocatable :: tracer_weight
+    real(8), dimension(:), allocatable :: tracer_weight
     !> トレーサーの世代
     integer, dimension(:), allocatable :: tracer_generation
 
@@ -122,15 +123,15 @@ module trace
     !> セル内のトレーサー総数
     integer, dimension(:, :), allocatable :: tracer_number_in_cell
     !>セル内の重み付きトレーサー数
-    double precision, dimension(:, :), allocatable ::  Weighted_number_in_cell
+    real(8), dimension(:, :), allocatable ::  Weighted_number_in_cell
     !> セル内のトレーサー総数のi断面合計
     integer, dimension(:, :), allocatable :: total_tracer_number_in_cross_section
     !> セル内のトレーサー総数のi断面平均
-    double precision, dimension(:, :), allocatable :: averaged_tracer_number_in_cross_section
+    real(8), dimension(:, :), allocatable :: averaged_tracer_number_in_cross_section
     !> セル内の時間積算トレーサー数
-    double precision, dimension(:, :), allocatable ::  time_integrated_tracer_number_in_cell
+    real(8), dimension(:, :), allocatable ::  time_integrated_tracer_number_in_cell
     !> セル内の時間平均トレーサー数
-    double precision, dimension(:, :), allocatable ::  time_averaged_tracer_number_in_cell
+    real(8), dimension(:, :), allocatable ::  time_averaged_tracer_number_in_cell
 
   end type normal_tracer
 
@@ -165,15 +166,15 @@ module trace
     integer:: is_added_trajectory_tracer
 
     !> 軌跡追跡トレーサーの追加時間
-    double precision :: supply_time
+    real(8) :: supply_time
 
     !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     ! トレーサーの属性
     !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     !> 軌跡のx座標
-    double precision, dimension(:, :), allocatable :: trajectory_coordinate_x
+    real(8), dimension(:, :), allocatable :: trajectory_coordinate_x
     !> 軌跡のy座標
-    double precision, dimension(:, :), allocatable :: trajectory_coordinate_y
+    real(8), dimension(:, :), allocatable :: trajectory_coordinate_y
     !> 保存された軌跡を構成する点の数
     integer, dimension(:), allocatable :: seved_trajectory_point_number
 
@@ -199,29 +200,29 @@ module trace
     !> windmapラインの最大保存回数
     integer:: max_save_times
     !> windmapラインの寿命(時間)
-    double precision:: life_time
+    real(8):: life_time
     !> windmapラインの保存間隔
-    double precision:: line_save_interval
+    real(8):: line_save_interval
 
     !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     ! トレーサーの属性
     !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     !> トレーサーのξ座標
-    double precision, dimension(:), allocatable :: tracer_coordinate_xi
+    real(8), dimension(:), allocatable :: tracer_coordinate_xi
     !> トレーサーのη座標
-    double precision, dimension(:), allocatable :: tracer_coordinate_eta
+    real(8), dimension(:), allocatable :: tracer_coordinate_eta
 
     !> windmapラインを何回保存したか
     integer, dimension(:), allocatable :: windmap_save_times
     !> windmapラインの保存用タイマー
-    double precision, dimension(:), allocatable :: windmap_save_timer
+    real(8), dimension(:), allocatable :: windmap_save_timer
 
     !> windmapラインのx座標
-    double precision, dimension(:, :), allocatable :: windmap_coordinate_x
+    real(8), dimension(:, :), allocatable :: windmap_coordinate_x
     !> windmapラインのy座標
-    double precision, dimension(:, :), allocatable :: windmap_coordinate_y
+    real(8), dimension(:, :), allocatable :: windmap_coordinate_y
     !> windmapラインの長さ
-    double precision, dimension(:, :), allocatable :: windmap_line_length
+    real(8), dimension(:, :), allocatable :: windmap_line_length
 
   end type windmap_tracer
 
@@ -241,16 +242,16 @@ contains
   !> @param[in] tracer_coordinate_eta トレーサーのη座標
   !> @param[inout] cell_index_i トレーサーの存在するセルのi方向インデックス
   !> @param[inout] cell_index_j トレーサーの存在するセルのi方向インデックス
-  !> @param[inout] tracer_coordinate_xi_in_cell セル内でのトレーサーのξ座標
-  !> @param[inout] tracer_coordinate_eta_in_cell セル内でのトレーサーのη座標
+  !> @param[inout, optional] tracer_coordinate_xi_in_cell セル内でのトレーサーのξ座標
+  !> @param[inout, optional] tracer_coordinate_eta_in_cell セル内でのトレーサーのη座標
   !******************************************************************************************
   subroutine find_tracer_cell_index(tracer_coordinate_xi, tracer_coordinate_eta, cell_index_i, cell_index_j, tracer_coordinate_xi_in_cell, tracer_coordinate_eta_in_cell)
-    double precision, intent(in) :: tracer_coordinate_xi
-    double precision, intent(in) :: tracer_coordinate_eta
+    real(8), intent(in) :: tracer_coordinate_xi
+    real(8), intent(in) :: tracer_coordinate_eta
     integer, intent(inout) :: cell_index_i
     integer, intent(inout) :: cell_index_j
-    double precision, intent(inout) :: tracer_coordinate_xi_in_cell
-    double precision, intent(inout) :: tracer_coordinate_eta_in_cell
+    real(8), intent(inout), optional :: tracer_coordinate_xi_in_cell
+    real(8), intent(inout), optional :: tracer_coordinate_eta_in_cell
 
     cell_index_i = int(tracer_coordinate_xi/grid_interval_xi) + 1
     cell_index_j = int(tracer_coordinate_eta/grid_interval_eta) + 1
@@ -266,8 +267,12 @@ contains
     if (abs(tracer_coordinate_eta - 1.0d0) < tolerance) cell_index_j = cell_count_j
 
     ! セル内のトレーサーのξ、η座標を計算
-    tracer_coordinate_xi_in_cell = tracer_coordinate_xi - grid_interval_xi*(cell_index_i - 1)
-    tracer_coordinate_eta_in_cell = tracer_coordinate_eta - grid_interval_eta*(cell_index_j - 1)
+    if (present(tracer_coordinate_xi_in_cell)) then
+      tracer_coordinate_xi_in_cell = tracer_coordinate_xi - grid_interval_xi*(cell_index_i - 1)
+    end if
+    if (present(tracer_coordinate_eta_in_cell)) then
+      tracer_coordinate_eta_in_cell = tracer_coordinate_eta - grid_interval_eta*(cell_index_j - 1)
+    end if
 
   end subroutine find_tracer_cell_index
 
@@ -281,16 +286,16 @@ contains
   !> @return point トレーサー位置のスカラー
   !******************************************************************************************
   function calculate_scalar_at_tracer_position(scalar, cell_index_i, cell_index_j, tracer_coordinate_xi_in_cell, tracer_coordinate_eta_in_cell) result(point)
-    double precision, intent(in), dimension(:, :) :: scalar
+    real(8), intent(in), dimension(:, :) :: scalar
     integer, intent(in) :: cell_index_i
     integer, intent(in) :: cell_index_j
-    double precision :: tracer_coordinate_xi_in_cell
-    double precision :: tracer_coordinate_eta_in_cell
-    double precision :: point
+    real(8) :: tracer_coordinate_xi_in_cell
+    real(8) :: tracer_coordinate_eta_in_cell
+    real(8) :: point
     !> ξ方向で上側の2つの値(i,j+1),(i+1,j+1)の補間結果
-    double precision :: interpolated_xi_top
+    real(8) :: interpolated_xi_top
     !> ξ方向で下側の2つの値(i,j),(i+1,j)の補間結果
-    double precision :: interpolated_xi_bottom
+    real(8) :: interpolated_xi_bottom
 
     ! トレーサー位置のスカラーを計算
     interpolated_xi_bottom = scalar(cell_index_i, cell_index_j) + (scalar(cell_index_i + 1, cell_index_j) - scalar(cell_index_i, cell_index_j))*tracer_coordinate_xi_in_cell/grid_interval_xi
@@ -311,10 +316,10 @@ contains
   subroutine transform_general_to_physical(cell_index_i, cell_index_j, tracer_coordinate_xi_in_cell, tracer_coordinate_eta_in_cell, tracer_coordinate_x, tracer_coordinate_y)
     integer, intent(in) :: cell_index_i
     integer, intent(in) :: cell_index_j
-    double precision, intent(in) :: tracer_coordinate_xi_in_cell
-    double precision, intent(in) :: tracer_coordinate_eta_in_cell
-    double precision, intent(inout) :: tracer_coordinate_x
-    double precision, intent(inout) :: tracer_coordinate_y
+    real(8), intent(in) :: tracer_coordinate_xi_in_cell
+    real(8), intent(in) :: tracer_coordinate_eta_in_cell
+    real(8), intent(inout) :: tracer_coordinate_x
+    real(8), intent(inout) :: tracer_coordinate_y
 
     ! 物理座標x、yを計算
     tracer_coordinate_x = node_coordinate_x(cell_index_i, cell_index_j) &
@@ -326,6 +331,7 @@ contains
 
   end subroutine transform_general_to_physical
 
+  ! TODO: サブルーチンにすることで計算が重くなる可能性があるので見直す。
   !******************************************************************************************
   !> @brief   入力された整数値を増加させるサブルーチン
   !> @param[inout] value  入力される元の整数値、結果として増加した値を返します
@@ -347,8 +353,8 @@ contains
   !******************************************************************************************
   subroutine increment_real_value(value, add_value)
     implicit none
-    double precision, intent(inout) :: value   ! 入力および出力: もとの整数値と増加後の値
-    double precision, intent(in) :: add_value
+    real(8), intent(inout) :: value   ! 入力および出力: もとの整数値と増加後の値
+    real(8), intent(in) :: add_value
 
     ! 値を増やす
     value = value + add_value
@@ -362,8 +368,8 @@ contains
   !******************************************************************************************
   subroutine increment_real_value_array(array, add_array)
     implicit none
-    double precision, intent(inout) :: array(:, :)   ! 入力および出力: もとの整数値と増加後の値
-    double precision, intent(in) :: add_array(:, :)
+    real(8), intent(inout) :: array(:, :)   ! 入力および出力: もとの整数値と増加後の値
+    real(8), intent(in) :: add_array(:, :)
 
     ! 値を増やす
     array = array + add_array
@@ -393,14 +399,13 @@ contains
   !******************************************************************************************
   subroutine generate_box_muller_random(z0, z1)
     implicit none
-    real(8)::drand
-    double precision :: u1
-    double precision :: u2
-    double precision, intent(inout) :: z0
-    double precision, intent(inout) :: z1
+    real(8) :: u1
+    real(8) :: u2
+    real(8), intent(inout) :: z0
+    real(8), intent(inout) :: z1
 
-    u1 = drand(0)
-    u2 = drand(0)
+    call random_number(u1)
+    call random_number(u2)
     z0 = sqrt(-2.*log(u1))*cos(2.*pi*u2)
     z1 = sqrt(-2.*log(u1))*sin(2.*pi*u2)
 
@@ -422,25 +427,25 @@ contains
   !******************************************************************************************
   subroutine check_tracer(Movable_Critical_depth, Movable_Critical_u_star, tracer_coordinate_xi, tracer_coordinate_eta, cell_index_i, cell_index_j, tracer_coordinate_xi_in_cell, tracer_coordinate_eta_in_cell, is_add_tracer, is_tracer_movable)
     !> 移動限界水深
-    double precision :: Movable_Critical_depth
+    real(8) :: Movable_Critical_depth
     !> 移動限界摩擦速度
-    double precision :: Movable_Critical_u_star
+    real(8) :: Movable_Critical_u_star
     !> ξ方向トレーサー座標
-    double precision, intent(in) :: tracer_coordinate_xi
+    real(8), intent(in) :: tracer_coordinate_xi
     !> η方向トレーサー座標
-    double precision, intent(in) :: tracer_coordinate_eta
+    real(8), intent(in) :: tracer_coordinate_eta
     !> 投入地点のセルインデックス
     integer, intent(in) :: cell_index_i
     !> 投入地点のセルインデックス
     integer, intent(in) :: cell_index_j
     !> セル内での移動後のξ方向座標
-    double precision, intent(in) :: tracer_coordinate_xi_in_cell
+    real(8), intent(in) :: tracer_coordinate_xi_in_cell
     !> セル内での移動後のη方向座標
-    double precision, intent(in) :: tracer_coordinate_eta_in_cell
+    real(8), intent(in) :: tracer_coordinate_eta_in_cell
     !> 投入地点の水深
-    double precision :: tracer_point_depth
+    real(8) :: tracer_point_depth
     !> 投入地点の摩擦速度
-    double precision :: tracer_point_u_star
+    real(8) :: tracer_point_u_star
 
     !> 投入するかしないか
     integer, intent(inout) :: is_add_tracer
@@ -595,17 +600,17 @@ contains
     type(normal_tracer), intent(inout) :: tracer
 
     !> ξ方向投入地点座標
-    double precision :: supply_position_xi
+    real(8) :: supply_position_xi
     !> η方向投入地点座標
-    double precision :: supply_position_eta
+    real(8) :: supply_position_eta
     !> 投入地点のセルインデックス
     integer :: supply_position_i
     !> 投入地点のセルインデックス
     integer :: supply_position_j
     !> セル内でのξ方向投入地点座標
-    double precision :: supply_position_xi_in_cell
+    real(8) :: supply_position_xi_in_cell
     !> セル内でのη方向投入地点座標
-    double precision :: supply_position_eta_in_cell
+    real(8) :: supply_position_eta_in_cell
 
     !> 投入するかしないか
     integer :: is_add_tracer
@@ -646,7 +651,7 @@ contains
         supply_position_eta = tracer%supply_position_eta_first + tracer%supply_interval_eta*supply_loop_index_eta
 
         ! 範囲外ならループ終了
-        if (supply_position_eta > tracer%supply_position_eta_end + tolerance) exit
+        if (supply_position_eta > tracer%supply_position_eta_end + tolerance) cycle
 
         ! 誤差範囲内なら誤差を補正
         if (supply_position_eta > tracer%supply_position_eta_end) supply_position_eta = tracer%supply_position_eta_end
@@ -726,49 +731,46 @@ contains
     integer :: total_tracer_number_before
 
     !> 移動後のξ方向座標
-    double precision :: moved_position_xi
+    real(8) :: moved_position_xi
     !> 移動後のη方向座標
-    double precision :: moved_position_eta
+    real(8) :: moved_position_eta
     !> 移動後のセル内でのξ方向座標
-    double precision :: moved_position_xi_in_cell
+    real(8) :: moved_position_xi_in_cell
     !> 移動後のセル内でのη方向座標
-    double precision :: moved_position_eta_in_cell
+    real(8) :: moved_position_eta_in_cell
     !> 移動後のセルのj方向インデックス
     integer :: moved_position_i
     !> 移動後のトレーサーのあるセルのインデックス
     integer :: moved_position_j
 
     !> トレーサー箇所の水深
-    double precision :: tracer_point_depth
+    real(8) :: tracer_point_depth
     !> トレーサー箇所の摩擦速度
-    double precision :: tracer_point_u_star
+    real(8) :: tracer_point_u_star
     !> トレーサー箇所のxi方向速度
-    double precision :: tracer_point_velocity_xi
+    real(8) :: tracer_point_velocity_xi
     !> トレーサー箇所のeta方向速度
-    double precision :: tracer_point_velocity_eta
+    real(8) :: tracer_point_velocity_eta
     !> トレーサー箇所の渦動粘性係数
-    double precision :: tracer_point_eddy_viscosity_coefficient
+    real(8) :: tracer_point_eddy_viscosity_coefficient
     !> トレーサー箇所の捕獲率
-    double precision :: tracer_point_trap_rate
+    real(8) :: tracer_point_trap_rate
     !> トレーサー箇所のξ方向スケーリング係数
-    double precision :: tracer_point_scale_factor_xi
+    real(8) :: tracer_point_scale_factor_xi
     !> トレーサー箇所のη方向スケーリング係数
-    double precision :: tracer_point_scale_factor_eta
+    real(8) :: tracer_point_scale_factor_eta
 
     !> トレーサー捕獲判定値
-    double precision :: trap_decision_value
+    real(8) :: trap_decision_value
 
     !> ランダムウォークの移動距離の標準偏差
-    double precision :: diffusion_std_dev
+    real(8) :: diffusion_std_dev
 
     ! ボックスミュラーによる正規分布乱数用変数
     !> 正規分布乱数
-    double precision :: bm_standard_normal_cos
+    real(8) :: bm_standard_normal_cos
     !> 正規分布乱数
-    double precision :: bm_standard_normal_sin
-
-    !> 乱数
-    real(8)::drand
+    real(8) :: bm_standard_normal_sin
 
     !==========================================================================================
     ! トレーサーの総数をリセット
@@ -805,6 +807,7 @@ contains
       tracer%is_tracer_movable(tracer_index) = 1
 
       ! 水深と摩擦速度によるチェック
+      ! TODO: この関数はもう一度見直す、引数減らせるはず。
       call check_tracer(tracer%Movable_Critical_depth, &
                         tracer%Movable_Critical_u_star, &
                         tracer%tracer_coordinate_xi(tracer_index), &
@@ -865,7 +868,8 @@ contains
         !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
         ! 捕獲の判定値の乱数を発生
         !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-        trap_decision_value = drand(0)*100
+        call random_number(trap_decision_value)
+        trap_decision_value = trap_decision_value*100
 
         !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
         ! 捕獲の判定
@@ -1207,17 +1211,17 @@ contains
     integer :: cell_index_j
 
     !> ξ方向投入地点座標
-    double precision :: supply_position_xi
+    real(8) :: supply_position_xi
     !> η方向投入地点座標
-    double precision :: supply_position_eta
+    real(8) :: supply_position_eta
     !> 投入地点のセルインデックス
     integer :: supply_position_i
     !> 投入地点のセルインデックス
     integer :: supply_position_j
     !> セル内でのξ方向投入地点座標
-    double precision :: supply_position_xi_in_cell
+    real(8) :: supply_position_xi_in_cell
     !> セル内でのη方向投入地点座標
-    double precision :: supply_position_eta_in_cell
+    real(8) :: supply_position_eta_in_cell
 
     !> 投入するかしないか
     integer :: is_add_tracer = 1
@@ -1308,7 +1312,7 @@ contains
   !> @param[inout] tracer  トレーサー構造体 (normal_tracer型)
   !******************************************************************************************
   subroutine calculate_tracer_statistics(time_since_start, tracer)
-    double precision, intent(in) :: time_since_start
+    real(8), intent(in) :: time_since_start
     type(normal_tracer), intent(inout) :: tracer
     integer :: tracer_index
     integer :: cell_index_i
@@ -1349,8 +1353,8 @@ contains
     character(len=*), intent(in) :: suffix
     type(normal_tracer), intent(in) :: tracer
     integer :: tracer_index
-    double precision, dimension(:), allocatable :: tracer_coordinate_x
-    double precision, dimension(:), allocatable :: tracer_coordinate_y
+    real(8), dimension(:), allocatable :: tracer_coordinate_x
+    real(8), dimension(:), allocatable :: tracer_coordinate_y
 
     allocate (tracer_coordinate_x(tracer%total_tracer_number))
     allocate (tracer_coordinate_y(tracer%total_tracer_number))
@@ -1497,17 +1501,17 @@ contains
     integer :: supply_loop_index_eta
 
     !> ξ方向投入地点座標
-    double precision :: supply_position_xi
+    real(8) :: supply_position_xi
     !> η方向投入地点座標
-    double precision :: supply_position_eta
+    real(8) :: supply_position_eta
     !> 投入地点のセルインデックス
     integer :: supply_position_i
     !> 投入地点のセルインデックス
     integer :: supply_position_j
     !> セル内でのξ方向投入地点座標
-    double precision :: supply_position_xi_in_cell
+    real(8) :: supply_position_xi_in_cell
     !> セル内でのη方向投入地点座標
-    double precision :: supply_position_eta_in_cell
+    real(8) :: supply_position_eta_in_cell
 
     !> 投入するかしないか
     integer :: is_add_tracer = 1
@@ -1545,7 +1549,7 @@ contains
         supply_position_eta = tracer%supply_position_eta_first + tracer%supply_interval_eta*supply_loop_index_eta
 
         ! 誤差範囲内なら誤差を補正
-        if (supply_position_eta > tracer%supply_position_eta_end + tolerance) exit
+        if (supply_position_eta > tracer%supply_position_eta_end + tolerance) cycle
 
         ! 誤差範囲内なら誤差を補正
         if (supply_position_eta > tracer%supply_position_eta_end) supply_position_eta = tracer%supply_position_eta_end
@@ -1630,49 +1634,46 @@ contains
     integer :: tracer_index
 
     !> 移動後のξ方向座標
-    double precision :: moved_position_xi
+    real(8) :: moved_position_xi
     !> 移動後のη方向座標
-    double precision :: moved_position_eta
+    real(8) :: moved_position_eta
     !> 移動後のセル内でのξ方向座標
-    double precision :: moved_position_xi_in_cell
+    real(8) :: moved_position_xi_in_cell
     !> 移動後のセル内でのη方向座標
-    double precision :: moved_position_eta_in_cell
+    real(8) :: moved_position_eta_in_cell
     !> 移動後のセルのi方向インデックス
     integer :: moved_position_i
     !> 移動後のセルのj方向インデックス
     integer :: moved_position_j
 
     !> トレーサー箇所の水深
-    double precision :: tracer_point_depth
+    real(8) :: tracer_point_depth
     !> トレーサー箇所の摩擦速度
-    double precision :: tracer_point_u_star
+    real(8) :: tracer_point_u_star
     !> トレーサー箇所のxi方向速度
-    double precision :: tracer_point_velocity_xi
+    real(8) :: tracer_point_velocity_xi
     !> トレーサー箇所のeta方向速度
-    double precision :: tracer_point_velocity_eta
+    real(8) :: tracer_point_velocity_eta
     !> トレーサー箇所の渦動粘性係数
-    double precision :: tracer_point_eddy_viscosity_coefficient
+    real(8) :: tracer_point_eddy_viscosity_coefficient
     !> トレーサー箇所の捕獲率
-    double precision :: tracer_point_trap_rate
+    real(8) :: tracer_point_trap_rate
     !> トレーサー箇所のξ方向スケーリング係数
-    double precision :: tracer_point_scale_factor_xi
+    real(8) :: tracer_point_scale_factor_xi
     !> トレーサー箇所のη方向スケーリング係数
-    double precision :: tracer_point_scale_factor_eta
+    real(8) :: tracer_point_scale_factor_eta
 
     !> トレーサー捕獲判定値
-    double precision :: trap_decision_value
+    real(8) :: trap_decision_value
 
     !> ランダムウォークの移動距離の標準偏差
-    double precision :: diffusion_std_dev
+    real(8) :: diffusion_std_dev
 
     ! ボックスミュラーによる正規分布乱数用変数
     !> 正規分布乱数
-    double precision :: bm_standard_normal_cos
+    real(8) :: bm_standard_normal_cos
     !> 正規分布乱数
-    double precision :: bm_standard_normal_sin
-
-    !> 乱数
-    real(8)::drand
+    real(8) :: bm_standard_normal_sin
 
     do tracer_index = 1, tracer%total_tracer_number ! 既存の全てのトレーサーのループ
 
@@ -1756,7 +1757,8 @@ contains
         !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
         ! 捕獲の判定値の乱数を発生
         !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-        trap_decision_value = drand(0)*100
+        call random_number(trap_decision_value)
+        trap_decision_value = trap_decision_value*100
 
         !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
         ! 捕獲の判定
@@ -2087,20 +2089,19 @@ contains
     integer :: is_add_tracer = 0
 
     !> xi方向投入地点座標
-    double precision :: supply_position_xi
+    real(8) :: supply_position_xi
     !> eta方向投入地点座標
-    double precision :: supply_position_eta
+    real(8) :: supply_position_eta
     !> 投入地点のセルインデックス
     integer :: supply_position_i
     !> 投入地点のセルインデックス
     integer :: supply_position_j
     !> セル内でのξ方向投入地点座標
-    double precision :: supply_position_xi_in_cell
+    real(8) :: supply_position_xi_in_cell
     !> セル内でのη方向投入地点座標
-    double precision :: supply_position_eta_in_cell
+    real(8) :: supply_position_eta_in_cell
 
     integer:: i
-    real(8)::drand
 
     !==========================================================================================
     ! トレーサー追加先の座標を障害物ではないランダムな場所から探す
@@ -2108,8 +2109,8 @@ contains
     do while (is_add_tracer == 0)
 
       ! 仮の投入地点を計算
-      supply_position_xi = drand(0)
-      supply_position_eta = drand(0)
+      call random_number(supply_position_xi)
+      call random_number(supply_position_eta)
 
       ! 投入箇所のセルのインデックスを調べる
       call find_tracer_cell_index(supply_position_xi, &
@@ -2172,46 +2173,43 @@ contains
     !> トレーサーのあるセルのインデックス
     integer :: cell_index_j
     !> トレーサーのセル内でのξ方向座標
-    double precision :: tracer_coordinate_xi_in_cell
+    real(8) :: tracer_coordinate_xi_in_cell
     !> トレーサーのセル内でのη方向座標
-    double precision :: tracer_coordinate_eta_in_cell
+    real(8) :: tracer_coordinate_eta_in_cell
 
     !> 移動後のξ方向座標
-    double precision :: moved_position_xi
+    real(8) :: moved_position_xi
     !> 移動後のη方向座標
-    double precision :: moved_position_eta
+    real(8) :: moved_position_eta
     !> 移動後のセル内でのξ方向座標
-    double precision :: moved_position_xi_in_cell
+    real(8) :: moved_position_xi_in_cell
     !> 移動後のセル内でのη方向座標
-    double precision :: moved_position_eta_in_cell
+    real(8) :: moved_position_eta_in_cell
     !> 移動後のセルのi方向インデックス
     integer :: moved_position_i
     !> 移動後のセルのj方向インデックス
     integer :: moved_position_j
 
     !> トレーサー地点の流速
-    double precision :: tracer_point_velocity_xi
+    real(8) :: tracer_point_velocity_xi
     !> トレーサー地点の流速
-    double precision :: tracer_point_velocity_eta
+    real(8) :: tracer_point_velocity_eta
     !> トレーサー地点の渦動粘性係数
-    double precision :: tracer_point_eddy_viscosity_coefficient
+    real(8) :: tracer_point_eddy_viscosity_coefficient
 
     !> トレーサー箇所のξ方向スケーリング係数
-    double precision :: tracer_point_scale_factor_xi
+    real(8) :: tracer_point_scale_factor_xi
     !> トレーサー箇所のη方向スケーリング係数
-    double precision :: tracer_point_scale_factor_eta
+    real(8) :: tracer_point_scale_factor_eta
 
     !> ランダムウォークの移動距離の標準偏差
-    double precision :: diffusion_std_dev
+    real(8) :: diffusion_std_dev
 
     !> ボックスミュラーによる正規分布乱数用変数
     !> 正規分布乱数
-    double precision :: bm_standard_normal_cos
+    real(8) :: bm_standard_normal_cos
     !> 正規分布乱数
-    double precision :: bm_standard_normal_sin
-
-    !> 乱数
-    real(8)::drand
+    real(8) :: bm_standard_normal_sin
 
     !==========================================================================================
     ! トレーサーの寿命をチェックして寿命を超えたら再配置
@@ -2389,11 +2387,11 @@ contains
     !> 何個目の保存かのインデックス
     integer :: saved_point_index
     !> ポリラインの長さの最小値
-    double precision :: polyline_length_min
+    real(8) :: polyline_length_min
     !> ポリラインの長さの最大値
-    double precision :: polyline_length_max
+    real(8) :: polyline_length_max
     !> 正規化された速度
-    double precision :: normalized_velocity
+    real(8) :: normalized_velocity
 
     !==========================================================================
     ! ポリラインの長さの最小値と最大値を計算
