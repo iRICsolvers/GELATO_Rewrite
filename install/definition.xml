@@ -775,22 +775,9 @@
 			</Item>
 
 			<!-- ジャンプするかどうか -->
-			<Item name="is_Jump_fish" caption="Fish Jumping">
+			<Item name="is_jump_fish" caption="Fish Jumping">
 				<Definition valueType="integer" default="0" checkBox="true">
 					<Condition type="isEqual" target="is_simulation_fish" value="1"/>
-				</Definition>
-			</Item>
-
-			<!-- 魚の動きの設定方法 -->
-			<Item name="fish_behavior_setting_method" caption="How to set fish performance">
-				<Definition valueType="integer" default="0">
-					<Condition type="isEqual" target="is_simulation_fish" value="1"/>
-					<Enumerations>
-						<!-- 体長から自動で設定する -->
-						<Enumeration value="0" caption="Automatically set depends on the fish body length"/>
-						<!-- リストから読み込む -->
-						<Enumeration value="1" caption="Read from fish information list"/>
-					</Enumerations>
 				</Definition>
 			</Item>
 
@@ -798,16 +785,12 @@
 			<GroupBox caption="Read from fish information list">
 
 				<!-- 魚の遊泳パラメーターリスト -->
-				<Item name="fish_swim_information_list" caption="fish seimming information list">
+				<Item name="fish_information_list" caption="fish seimming information list">
 					<Definition valueType="complex">
-						<!-- <Condition type="and">
-							<Condition type="isEqual" target="is_simulation_fish" value="1"/>
-							<Condition type="isEqual" target="fish_behavior_setting_method" value="1"/>
-						</Condition> -->
 
 						<!-- このグループが占める割合 -->
-						<Item name="percentage" caption="Percentage of Group">
-							<Definition valueType="integer" default="20" min="1" max="100" />
+						<Item name="fish_group_ratio" caption="Ratio of Fish Group">
+							<Definition valueType="integer" default="1" min="1" />
 						</Item>
 
 						<!-- 体長 -->
@@ -826,16 +809,43 @@
 						</Item>
 
 						<!-- 突進速度 -->
-						<Item name="fish_Rush_speed" caption="fish Rush speed (m/s)">
+						<Item name="fish_rush_speed" caption="fish Rush speed (m/s)">
 							<Definition valueType="real" default="0.2" min="0"/>
 						</Item>
 
 						<!-- 突進継続時間 -->
-						<Item name="fish_Rush_time" caption="Fish Rush time (sec)">
+						<Item name="fish_rush_time" caption="Fish Rush time (sec)">
 							<Definition valueType="real" default="5" min="0"/>
 						</Item>
 
-						<!-- ジャンプに調整する高さ -->
+						<!-- 移動限界水深 -->
+						<Item name="movable_critical_depth_fish" caption="Minimum Depth for Fish Activity(m)">
+							<Definition valueType="real" default="0.01"/>
+						</Item>
+
+						<!-- 限界水深での魚の挙動 -->
+						<Item name="fish_handling_in_critical_depth" caption="Fish motion in critical depth area">
+							<Definition valueType="integer" default="0">
+								<Enumerations>
+									<!-- その場に留まる -->
+									<Enumeration value="0" caption="Stop"/>
+									<!-- 逆方向に泳ぐ -->
+									<Enumeration value="1" caption="Reverse"/>
+									<!-- 流れに身を任せる -->
+									<Enumeration value="2" caption="Noswimming"/>
+									<!-- ランダムな方向に泳ぐ -->
+									<Enumeration value="3" caption="Random"/>
+								</Enumerations>
+							</Definition>
+						</Item>
+
+						<!-- 限界水深に入った魚の挙動の継続時間 -->
+						<Item name="behavior_time_in_critical_depth" caption="Time during motion in critical depth area(sec)">
+							<Definition valueType="real" default="1">
+							</Definition>
+						</Item>
+
+						<!-- ジャンプに挑戦する高さ -->
 						<Item name="jump_try_height" caption="Bed elevation drop height where fish consider jumping(m)">
 							<Definition valueType="real" default="0.15"/>
 						</Item>
@@ -859,180 +869,6 @@
 				</Item>
 
 			</GroupBox>
-
-			<!-- 体長から自動で設定する -->
-			<GroupBox caption="Automatically set depends on the fish body length">
-
-				<!-- 魚の泳ぎのパラメーター -->
-				<GroupBox caption="Fish swimming parameters">
-
-					<!-- 基準となる魚の体長 -->
-					<Item name="base_fish_body_length" caption="Base Fish Body Length(m)">
-						<Definition valueType="real" default="0.3">
-							<Condition type="and">
-								<Condition type="isEqual" target="is_simulation_fish" value="1"/>
-								<Condition type="isEqual" target="fish_behavior_setting_method" value="0"/>
-							</Condition>
-						</Definition>
-					</Item>
-
-					<!-- 魚の体長にバリエーションをもたせるか -->
-					<Item name="is_given_fish_body_length_variation" caption="Fish body length variation">
-						<Definition valueType="integer" default="0">
-							<Condition type="and">
-								<Condition type="isEqual" target="is_simulation_fish" value="1"/>
-								<Condition type="isEqual" target="fish_behavior_setting_method" value="0"/>
-							</Condition>
-							<Enumerations>
-								<!-- 一定の値を用いる -->
-								<Enumeration value="0" caption="Constant length"/>
-								<!-- バリエーションを与える -->
-								<Enumeration value="1" caption="Variation length"/>
-							</Enumerations>
-						</Definition>
-					</Item>
-
-					<!-- 魚のバリエーション数 -->
-					<Item name="fish_variation_number" caption="Number of Fish Sizes(Colors)">
-						<Definition valueType="integer" default="10" min="1">
-							<Condition type="and">
-								<Condition type="isEqual" target="is_simulation_fish" value="1"/>
-								<Condition type="isEqual" target="fish_behavior_setting_method" value="0"/>
-								<Condition type="isEqual" target="is_given_fish_body_length_variation" value="0"/>
-							</Condition>
-						</Definition>
-					</Item>
-
-					<!-- 魚の体長範囲比最小 -->
-					<Item name="variation_rate_range_min" caption="Variation Rate Range">
-						<Definition valueType="real" default="0.5" min="0.01">
-							<Condition type="and">
-								<Condition type="isEqual" target="is_simulation_fish" value="1"/>
-								<Condition type="isEqual" target="fish_behavior_setting_method" value="0"/>
-								<Condition type="isEqual" target="is_given_fish_body_length_variation" value="0"/>
-							</Condition>
-						</Definition>
-					</Item>
-
-					<!-- 魚の体長範囲比最大 -->
-					<Item name="variation_rate_range_max" caption="Variation Rate Range">
-						<Definition valueType="real" default="1.5">
-							<Condition type="and">
-								<Condition type="isEqual" target="is_simulation_fish" value="1"/>
-								<Condition type="isEqual" target="fish_behavior_setting_method" value="0"/>
-								<Condition type="isEqual" target="is_given_fish_body_length_variation" value="0"/>
-							</Condition>
-						</Definition>
-					</Item>
-
-					<!-- 基準となる魚の巡航速度 -->
-					<Item name="base_fish_speed" caption="Fish Cruising Base Speed(m/s)">
-						<Definition valueType="real" default="0.1">
-							<Condition type="and">
-								<Condition type="isEqual" target="is_simulation_fish" value="1"/>
-								<Condition type="isEqual" target="fish_behavior_setting_method" value="0"/>
-							</Condition>
-						</Definition>
-					</Item>
-
-					<!-- 体長に対する巡航サイクルの係数 -->
-					<!-- 巡航サイクル = 体長 * 係数 -->
-					<Item name="cruise_cycle_coefficient" caption="Cruising time to fish length ratio(s/m)">
-						<Definition valueType="real" default="10.">
-							<Condition type="and">
-								<Condition type="isEqual" target="is_simulation_fish" value="1"/>
-								<Condition type="isEqual" target="fish_behavior_setting_method" value="0"/>
-							</Condition>
-						</Definition>
-					</Item>
-
-					<!-- 巡航サイクルにおける突進時間の割合 -->
-					<Item name="rush_time_rate" caption="Rush time to cruising cycle time ratio">
-						<Definition valueType="real" default="0.1">
-							<Condition type="and">
-								<Condition type="isEqual" target="is_simulation_fish" value="1"/>
-								<Condition type="isEqual" target="fish_behavior_setting_method" value="0"/>
-							</Condition>
-						</Definition>
-					</Item>
-
-					<!-- 巡航速度に対する突進速度の比 -->
-					<Item name="rush_speed_rate" caption="Rush speed to cruising speed ratio">
-						<Definition valueType="real" default="5">
-							<Condition type="and">
-								<Condition type="isEqual" target="is_simulation_fish" value="1"/>
-								<Condition type="isEqual" target="fish_behavior_setting_method" value="0"/>
-							</Condition>
-						</Definition>
-					</Item>
-
-					<!-- 巡航速度が体長に依存するか -->
-					<Item name="is_speed_depend_body_length" caption="Does Cruising velocity depends on body length?">
-						<Definition valueType="integer" default="1">
-							<Condition type="and">
-								<Condition type="isEqual" target="is_simulation_fish" value="1"/>
-								<Condition type="isEqual" target="fish_behavior_setting_method" value="0"/>
-							</Condition>
-							<Enumerations>
-								<Enumeration value="0" caption="Constant cruising velocity"/>
-								<Enumeration value="1" caption="Cruising velocity depends on body length"/>
-							</Enumerations>
-						</Definition>
-					</Item>
-
-				</GroupBox>
-
-				<!-- 魚のジャンプパラメーター -->
-				<GroupBox caption="Fish Jumping parameters">
-
-					<!-- ジャンプに調整する高さ -->
-					<Item name="jump_try_height_gui" caption="Bed elevation drop height where fish consider jumping(m)">
-						<Definition valueType="real" default="0.15">
-							<Condition type="and">
-								<Condition type="isEqual" target="is_simulation_fish" value="1"/>
-								<Condition type="isEqual" target="fish_behavior_setting_method" value="0"/>
-								<Condition type="isEqual" target="is_Jump_fish" value="1"/>
-							</Condition>
-						</Definition>
-					</Item>
-
-					<!-- ジャンプの高さ -->
-					<Item name="jumpable_height_gui" caption="Possible jumping height(m)">
-						<Definition valueType="real" default="0.5">
-							<Condition type="and">
-								<Condition type="isEqual" target="is_simulation_fish" value="1"/>
-								<Condition type="isEqual" target="fish_behavior_setting_method" value="0"/>
-								<Condition type="isEqual" target="is_Jump_fish" value="1"/>
-							</Condition>
-						</Definition>
-					</Item>
-
-					<!-- ジャンプできる距離 -->
-					<Item name="jumpable_distance_gui" caption="Possible jumping distance(m)">
-						<Definition valueType="real" default="0.5">
-							<Condition type="and">
-								<Condition type="isEqual" target="is_simulation_fish" value="1"/>
-								<Condition type="isEqual" target="fish_behavior_setting_method" value="0"/>
-								<Condition type="isEqual" target="is_Jump_fish" value="1"/>
-							</Condition>
-						</Definition>
-					</Item>
-
-					<!-- ジャンプ中に色が変わる時間 -->
-					<Item name="color_changing_time_during_jump_gui" caption="Color change time during jumping motion(sec)">
-						<Definition valueType="real" default="1">
-							<Condition type="and">
-								<Condition type="isEqual" target="is_simulation_fish" value="1"/>
-								<Condition type="isEqual" target="fish_behavior_setting_method" value="0"/>
-								<Condition type="isEqual" target="is_Jump_fish" value="1"/>
-							</Condition>
-						</Definition>
-					</Item>
-
-				</GroupBox>
-
-			</GroupBox>
-
 		</Tab>
 
 		<!-- 魚の設定2 -->
@@ -1051,6 +887,21 @@
 				</Definition>
 			</Item>
 
+			<!-- 魚を配置できない場合の処理 -->
+			<Item name="fish_handling_unable_to_place" caption="Handling when unable to place">
+				<Definition valueType="integer" default="0" tooltips="When the fish cannot be placed, it will be handled as follows:&#xa;0: Fish placed in an obstacle cell or under the minimum depth point will be removed.&#xa;1: Fish placed in an obstacle cell will be removed.&#xa;2: Fish placed in an obstacle cell or under the minimum depth point will be replaced to a random position.&#xa;3: Fish placed in an obstacle cell will be replaced to a random position.">
+					<Condition type="and">
+						<Condition type="isEqual" target="is_simulation_fish" value="1"/>
+					</Condition>
+					<Enumerations>
+						<Enumeration value="0" caption="Remove (obstacle and depth)"/>
+						<Enumeration value="1" caption="Remove (obstacle)"/>
+						<Enumeration value="2" caption="Relocation (obstacle and depth)"/>
+						<Enumeration value="3" caption="Relocation (obstacle)"/>
+					</Enumerations>
+				</Definition>
+			</Item>
+
 			<!-- 魚の総数 -->
 			<Item name="fish_number" caption="Total number of fish">
 				<Definition valueType="integer" default="100" max="1000">
@@ -1058,7 +909,6 @@
 						<Condition type="isEqual" target="is_simulation_fish" value="1"/>
 						<Condition type="isEqual" target="fish_arrangement_method" value="2"/>
 					</Condition>
-
 				</Definition>
 			</Item>
 
@@ -1070,34 +920,31 @@
 
 					<!-- 始点 -->
 					<Item name="supply_position_xi_first_fish" caption="xi_1">
-						<Definition valueType="real" default="0.1">
+						<Definition valueType="real" default="0.1" min="0.0" max="1.0">
 							<Condition type="and">
 								<Condition type="isEqual" target="is_simulation_fish" value="1"/>
 								<Condition type="isEqual" target="fish_arrangement_method" value="1"/>
 							</Condition>
-
 						</Definition>
 					</Item>
 
 					<!-- 終点 -->
 					<Item name="supply_position_xi_end_fish" caption="xi_2">
-						<Definition valueType="real" default="0.1">
+						<Definition valueType="real" default="0.1" min="0.0" max="1.0">
 							<Condition type="and">
 								<Condition type="isEqual" target="is_simulation_fish" value="1"/>
 								<Condition type="isEqual" target="fish_arrangement_method" value="1"/>
 							</Condition>
-
 						</Definition>
 					</Item>
 
 					<!-- 間隔 -->
 					<Item name="supply_interval_xi_fish" caption="d_xi">
-						<Definition valueType="real" default="0.1">
+						<Definition valueType="real" default="0.1" min="0.0" max="1.0">
 							<Condition type="and">
 								<Condition type="isEqual" target="is_simulation_fish" value="1"/>
 								<Condition type="isEqual" target="fish_arrangement_method" value="1"/>
 							</Condition>
-
 						</Definition>
 					</Item>
 
@@ -1108,83 +955,37 @@
 
 					<!-- 始点 -->
 					<Item name="supply_position_eta_first_fish" caption="eta_1">
-						<Definition valueType="real" default="0.3">
+						<Definition valueType="real" default="0.3" min="0.0" max="1.0">
 							<Condition type="and">
 								<Condition type="isEqual" target="is_simulation_fish" value="1"/>
 								<Condition type="isEqual" target="fish_arrangement_method" value="1"/>
 							</Condition>
-
 						</Definition>
 					</Item>
 
 					<!-- 終点 -->
 					<Item name="supply_position_eta_end_fish" caption="eta_2">
-						<Definition valueType="real" default="0.7">
+						<Definition valueType="real" default="0.7" min="0.0" max="1.0">
 							<Condition type="and">
 								<Condition type="isEqual" target="is_simulation_fish" value="1"/>
 								<Condition type="isEqual" target="fish_arrangement_method" value="1"/>
 							</Condition>
-
 						</Definition>
 					</Item>
 
 					<!-- 間隔 -->
 					<Item name="supply_interval_eta_fish" caption="d_eta">
-						<Definition valueType="real" default="0.02">
+						<Definition valueType="real" default="0.02" min="0.0" max="1.0">
 							<Condition type="and">
 								<Condition type="isEqual" target="is_simulation_fish" value="1"/>
 								<Condition type="isEqual" target="fish_arrangement_method" value="1"/>
 							</Condition>
-
 						</Definition>
 					</Item>
 
 				</GroupBox>
 
 				<Image src="tracer supply range.png"/>
-
-			</GroupBox>
-
-			<!-- 魚の移動限界水深 -->
-			<GroupBox caption="Fish hmin parameters">
-
-				<!-- 移動限界水深 -->
-				<Item name="Movable_Critical_depth_fish" caption="Minimum Depth for Fish Activity(m)">
-					<Definition valueType="real" default="0.01">
-						<Condition type="and">
-							<Condition type="isEqual" target="is_simulation_fish" value="1"/>
-						</Condition>
-
-					</Definition>
-				</Item>
-
-				<!-- 限界水深での魚の挙動 -->
-				<Item name="fish_handling_in_Critical_depth" caption="Fish motion in hminArea">
-					<Definition valueType="integer" default="0">
-						<Condition type="isEqual" target="is_simulation_fish" value="1"/>
-						<Enumerations>
-							<!-- その場に留まる -->
-							<Enumeration value="0" caption="Stop"/>
-							<!-- 逆方向に泳ぐ -->
-							<Enumeration value="1" caption="Reverse"/>
-							<!-- 流れに身を任せる -->
-							<Enumeration value="2" caption="Noswimming"/>
-							<!-- ランダムな方向に泳ぐ -->
-							<Enumeration value="3" caption="Random"/>
-						</Enumerations>
-					</Definition>
-				</Item>
-
-				<!-- 限界水深に入った魚の挙動の継続時間 -->
-				<Item name="behavior_time_in_Critical_depth" caption="Time during hmin motion(sec)">
-					<Definition valueType="real" default="1">
-						<Condition type="and">
-							<Condition type="isEqual" target="is_simulation_fish" value="1"/>
-							<Condition type="isGreaterEqual" target="j_fishhmin" value="1"/>
-						</Condition>
-
-					</Definition>
-				</Item>
 
 			</GroupBox>
 
@@ -1594,6 +1395,36 @@
 		</Output>
 		<Output name="Tracer Wight(Secondary)" caption="Tracer Wight(Secondary)">
 			<Definition valueType="real" position="Tracer" />
+		</Output>
+
+		<!-- 魚の値 -->
+		<Output name="Number of Alived Fish" caption="Number of Alived Fish">
+			<Definition valueType="integer"/>
+		</Output>
+		<Output name="Number of Fish passed through the section" caption="Number of Fish passed through the section">
+			<Definition valueType="integer"/>
+		</Output>
+		<Output name="Swim Mode" caption="Swim Mode">
+			<Definition valueType="integer">
+				<Enumerations>
+					<Enumeration value="0" caption="Normal Mode"/>
+					<Enumeration value="1" caption="Rush Mode"/>
+				</Enumerations>
+			</Definition>
+		</Output>
+		<Output name="under critical depth mode" caption="under critical depth mode">
+			<Definition valueType="integer">
+				<Enumerations>
+					<Enumeration value="0" caption="Disable"/>
+					<Enumeration value="1" caption="Enable"/>
+				</Enumerations>
+			</Definition>
+		</Output>
+		<Output name="Fish Group" caption="Fish Group">
+			<Definition valueType="integer"/>
+		</Output>
+		<Output name="Fish Index" caption="Fish Index">
+			<Definition valueType="integer"/>
 		</Output>
 
 	</GridRelatedCondition>

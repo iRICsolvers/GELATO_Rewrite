@@ -22,12 +22,12 @@ module grid
   integer :: cell_count_j
 
   !> 格子のy座標
-  double precision, dimension(:, :), allocatable :: node_coordinate_x
+  real(8), dimension(:, :), allocatable :: node_coordinate_x
   !> 格子のy座標
-  double precision, dimension(:, :), allocatable :: node_coordinate_y
+  real(8), dimension(:, :), allocatable :: node_coordinate_y
 
   !> 水路長
-  double precision :: channel_length
+  real(8) :: channel_length
 
   !> j方向中央のインデックス
   integer :: j_center
@@ -40,9 +40,9 @@ module grid
   !> クローンニングセル
   integer, dimension(:, :), allocatable :: is_cloning_cell
   !> マニング粗度(セル)
-  double precision, dimension(:, :), allocatable :: roughness_cell
+  real(8), dimension(:, :), allocatable :: roughness_cell
   !> マニング粗度(格子点)
-  double precision, dimension(:, :), allocatable :: roughness_node
+  real(8), dimension(:, :), allocatable :: roughness_node
   !> 植生発生セル
   integer, dimension(:, :), allocatable :: is_vegetation_cell
   !> 礫発生セル
@@ -54,37 +54,37 @@ module grid
   ! 一般化座標系関係
   !******************************************************************************************
   !> ξ方向一般座標系格子
-  double precision :: grid_interval_xi
+  real(8) :: grid_interval_xi
   !> ξ方向物理座標での格子点間距離の最小値
-  double precision :: grid_physical_distance_xi_min
+  real(8) :: grid_physical_distance_xi_min
   !> ξ方向スケーリング係数
-  double precision, dimension(:, :), allocatable :: scale_factor_xi
+  real(8), dimension(:, :), allocatable :: scale_factor_xi
   !> ξ方向でのxの勾配(中央差分法)
-  double precision, dimension(:, :), allocatable :: x_gradient_in_xi
+  real(8), dimension(:, :), allocatable :: x_gradient_in_xi
   !> ξ方向でのyの勾配(中央差分法)
-  double precision, dimension(:, :), allocatable :: y_gradient_in_xi
-  !> ξ方向の変位を x方向に変換するための変換行列の要素
-  double precision, dimension(:, :), allocatable :: xi_to_x_component
-  !> ξ方向の変位を y方向に変換するための変換行列の要素
-  double precision, dimension(:, :), allocatable :: xi_to_y_component
+  real(8), dimension(:, :), allocatable :: y_gradient_in_xi
+  !> x方向の変位を ξ方向に変換する逆ヤコビ行列の要素（∂ξ/∂x = ∂y/∂η / det(J)）
+  real(8), dimension(:, :), allocatable :: x_to_xi_component
+  !> y方向の変位を ξ方向に変換する逆ヤコビ行列の要素（∂ξ/∂y = -∂x/∂η / det(J)）
+  real(8), dimension(:, :), allocatable :: y_to_xi_component
 
   !> η方向一般座標系格子間隔
-  double precision :: grid_interval_eta
+  real(8) :: grid_interval_eta
   !> η方向物理座標での格子点間距離の最小値
-  double precision :: grid_physical_distance_eta_min
+  real(8) :: grid_physical_distance_eta_min
   !> η方向スケーリング係数
-  double precision, dimension(:, :), allocatable :: scale_factor_eta
-  !> ξ方向でのxの勾配(中央差分法)
-  double precision, dimension(:, :), allocatable :: x_gradient_in_eta
-  !> ξ方向でのyの勾配(中央差分法)
-  double precision, dimension(:, :), allocatable :: y_gradient_in_eta
-  !> ξ方向の変位を x方向に変換するための変換行列の要素
-  double precision, dimension(:, :), allocatable :: eta_to_x_component
-  !> ξ方向の変位を y方向に変換するための変換行列の要素
-  double precision, dimension(:, :), allocatable :: eta_to_y_component
+  real(8), dimension(:, :), allocatable :: scale_factor_eta
+  !> η方向でのxの勾配(中央差分法)
+  real(8), dimension(:, :), allocatable :: x_gradient_in_eta
+  !> η方向でのyの勾配(中央差分法)
+  real(8), dimension(:, :), allocatable :: y_gradient_in_eta
+  !> x方向の変位を η方向に変換する逆ヤコビ行列の要素（∂η/∂x = -∂y/∂ξ / det(J)）
+  real(8), dimension(:, :), allocatable :: x_to_eta_component
+  !> y方向の変位を η方向に変換する逆ヤコビ行列の要素（∂η/∂y = ∂x/∂ξ / det(J)）
+  real(8), dimension(:, :), allocatable :: y_to_eta_component
 
-  !> ヤコビアンの逆数
-  double precision, dimension(:, :), allocatable :: inverse_jacobian
+  !> ヤコビアン行列の逆数 det(J)
+  real(8), dimension(:, :), allocatable :: inverse_jacobian
 
 contains
 
@@ -146,7 +146,7 @@ contains
     !==========================================================================================
     call cell2node(roughness_cell, roughness_node)
 
-    call compute_transform_metrics
+    call compute_transform_metrics()
 
   end subroutine Load_Grid
 
@@ -157,17 +157,17 @@ contains
     implicit none
 
     !> ξ方向一般座標系格子間隔
-    double precision :: grid_physical_distance_xi
+    real(8) :: grid_physical_distance_xi
     !> η方向一般座標系格子間隔
-    double precision :: grid_physical_distance_eta
-    !> 特定の格子でのξ方向におけるxの勾配
-    double precision :: x_base_gradient_in_xi
-    !> 特定の格子でのξ方向におけるyの勾配
-    double precision :: y_base_gradient_in_xi
-    !> 特定の格子でのη方向におけるxの勾配
-    double precision :: x_base_gradient_in_eta
-    !> 特定の格子でのη方向におけるyの勾配
-    double precision :: y_base_gradient_in_eta
+    real(8) :: grid_physical_distance_eta
+    !> xi, eta方向の変位を x, y方向に変換するための変換行列の要素(∂x/∂ξ)(x方向の変位をxi方向の変位で除した傾き)
+    real(8) :: xi_to_x_component
+    !> xi, eta方向の変位を x, y方向に変換するための変換行列の要素(∂y/∂ξ)(y方向の変位をxi方向の変位で除した傾き)
+    real(8) :: xi_to_y_component
+    !> xi, eta方向の変位を x, y方向に変換するための変換行列の要素(∂x/∂η)(x方向の変位をeta方向の変位で除した傾き)
+    real(8) :: eta_to_x_component
+    !> xi, eta方向の変位を x, y方向に変換するための変換行列の要素(∂y/∂η)(y方向の変位をeta方向の変位で除した傾き)
+    real(8) :: eta_to_y_component
 
     !> i方向ループ用の変数
     integer :: i
@@ -195,10 +195,10 @@ contains
     allocate (y_gradient_in_eta(cell_count_i, cell_count_j))
 
     allocate (inverse_jacobian(node_count_i, node_count_j))
-    allocate (xi_to_x_component(node_count_i, node_count_j))
-    allocate (xi_to_y_component(node_count_i, node_count_j))
-    allocate (eta_to_x_component(node_count_i, node_count_j))
-    allocate (eta_to_y_component(node_count_i, node_count_j))
+    allocate (x_to_xi_component(node_count_i, node_count_j))
+    allocate (y_to_xi_component(node_count_i, node_count_j))
+    allocate (x_to_eta_component(node_count_i, node_count_j))
+    allocate (y_to_eta_component(node_count_i, node_count_j))
 
     !==========================================================================================
     ! 水路延長、ξ,η方向のスケーリング係数の計算
@@ -238,43 +238,66 @@ contains
     end do
     !$omp end parallel do
 
-    !$omp parallel do collapse(2) private(i, j, x_base_gradient_in_xi, y_base_gradient_in_xi, x_base_gradient_in_eta, y_base_gradient_in_eta) shared(node_coordinate_x, node_coordinate_y, inverse_jacobian, xi_to_x_component, xi_to_y_component, eta_to_x_component, eta_to_y_component)
+    !$omp parallel do collapse(2) private(i, j, xi_to_x_component, xi_to_y_component, eta_to_x_component, eta_to_y_component) shared(node_coordinate_x, node_coordinate_y, inverse_jacobian, x_to_xi_component, y_to_xi_component, x_to_eta_component, y_to_eta_component)
     do j = 1, node_count_j
       do i = 1, node_count_i
         !==========================================================================================
         ! ξ、η方向でのx,yの勾配(2点差分方法)
+        ! xi, eta方向の変位を x, y方向に変換するための変換行列の要素を計算
         !==========================================================================================
         if (i == 1) then
-          x_base_gradient_in_xi = (node_coordinate_x(i + 1, j) - node_coordinate_x(i, j))/grid_interval_xi
-          y_base_gradient_in_xi = (node_coordinate_y(i + 1, j) - node_coordinate_y(i, j))/grid_interval_xi
+          xi_to_x_component = (node_coordinate_x(i + 1, j) - node_coordinate_x(i, j))/grid_interval_xi
+          xi_to_y_component = (node_coordinate_y(i + 1, j) - node_coordinate_y(i, j))/grid_interval_xi
         else if (i == node_count_i) then
-          x_base_gradient_in_xi = (node_coordinate_x(i, j) - node_coordinate_x(i - 1, j))/grid_interval_xi
-          y_base_gradient_in_xi = (node_coordinate_y(i, j) - node_coordinate_y(i - 1, j))/grid_interval_xi
+          xi_to_x_component = (node_coordinate_x(i, j) - node_coordinate_x(i - 1, j))/grid_interval_xi
+          xi_to_y_component = (node_coordinate_y(i, j) - node_coordinate_y(i - 1, j))/grid_interval_xi
         else
-          x_base_gradient_in_xi = (node_coordinate_x(i + 1, j) - node_coordinate_x(i - 1, j))/(2.*grid_interval_xi)
-          y_base_gradient_in_xi = (node_coordinate_y(i + 1, j) - node_coordinate_y(i - 1, j))/(2.*grid_interval_xi)
+          xi_to_x_component = (node_coordinate_x(i + 1, j) - node_coordinate_x(i - 1, j))/(2.*grid_interval_xi)
+          xi_to_y_component = (node_coordinate_y(i + 1, j) - node_coordinate_y(i - 1, j))/(2.*grid_interval_xi)
         end if
 
         if (j == 1) then
-          x_base_gradient_in_eta = (node_coordinate_x(i, j + 1) - node_coordinate_x(i, j))/grid_interval_eta
-          y_base_gradient_in_eta = (node_coordinate_y(i, j + 1) - node_coordinate_y(i, j))/grid_interval_eta
+          eta_to_x_component = (node_coordinate_x(i, j + 1) - node_coordinate_x(i, j))/grid_interval_eta
+          eta_to_y_component = (node_coordinate_y(i, j + 1) - node_coordinate_y(i, j))/grid_interval_eta
         else if (j == node_count_j) then
-          x_base_gradient_in_eta = (node_coordinate_x(i, j) - node_coordinate_x(i, j - 1))/grid_interval_eta
-          y_base_gradient_in_eta = (node_coordinate_y(i, j) - node_coordinate_y(i, j - 1))/grid_interval_eta
+          eta_to_x_component = (node_coordinate_x(i, j) - node_coordinate_x(i, j - 1))/grid_interval_eta
+          eta_to_y_component = (node_coordinate_y(i, j) - node_coordinate_y(i, j - 1))/grid_interval_eta
         else
-          x_base_gradient_in_eta = (node_coordinate_x(i, j + 1) - node_coordinate_x(i, j - 1))/(2.*grid_interval_eta)
-          y_base_gradient_in_eta = (node_coordinate_y(i, j + 1) - node_coordinate_y(i, j - 1))/(2.*grid_interval_eta)
+          eta_to_x_component = (node_coordinate_x(i, j + 1) - node_coordinate_x(i, j - 1))/(2.*grid_interval_eta)
+          eta_to_y_component = (node_coordinate_y(i, j + 1) - node_coordinate_y(i, j - 1))/(2.*grid_interval_eta)
         end if
 
         !==========================================================================================
-        ! ξ、η方向の変位を x,y方向に変換するための変換行列の要素
+        ! x, y方向の変位を ξ, η方向に変換する逆ヤコビ行列の要素を計算する
+        ! GELATOの計算では、x, y方向の変位を ξ, η方向に変換する方がおおいので共通変数には逆ヤコビ行列を格納する
+        !
+        ! ξ, η方向の変位を x, y方向に変換するための変換行列＝ヤコビ行列J
+        ! ヤコビ行列 J:
+        ! J = [ xi_to_x_component   eta_to_x_component ]
+        !     [ xi_to_y_component   eta_to_y_component ]
+        !
+        ! x=ξ方向の変位*xi_to_x_component + η方向の変位*eta_to_x_component
+        ! y=ξ方向の変位*xi_to_y_component + η方向の変位*eta_to_y_component
+        !
+        ! x, y方向の変位を ξ, η方向に変換するには逆ヤコビ行列を使う
+        !
+        ! J⁻¹ = 1/det(J) * [ eta_to_y_component  -eta_to_x_component ]
+        !                  [ -xi_to_y_component    xi_to_x_component ]
+        !
+        ! ヤコビ行列の行列式:
+        ! det(J) = xi_to_x_component * eta_to_y_component - eta_to_x_component * xi_to_y_component
+        !
+        ! 逆ヤコビ行列 J⁻¹を以下のようにすると
+        ! J⁻¹ = [ x_to_xi_component   y_to_xi_component  ]
+        !       [ x_to_eta_component  y_to_eta_component ]
+        !
+        ! 以下のような式になる
         !==========================================================================================
-
-        inverse_jacobian(i, j) = 1./(x_base_gradient_in_xi*y_base_gradient_in_eta - x_base_gradient_in_eta*y_base_gradient_in_xi)
-        xi_to_x_component(i, j) = inverse_jacobian(i, j)*y_base_gradient_in_eta
-        xi_to_y_component(i, j) = -inverse_jacobian(i, j)*x_base_gradient_in_eta
-        eta_to_x_component(i, j) = -inverse_jacobian(i, j)*y_base_gradient_in_xi
-        eta_to_y_component(i, j) = inverse_jacobian(i, j)*x_base_gradient_in_xi
+        inverse_jacobian(i, j) = 1./(xi_to_x_component*eta_to_y_component - eta_to_x_component*xi_to_y_component)
+        x_to_xi_component(i, j) = inverse_jacobian(i, j)*eta_to_y_component
+        y_to_xi_component(i, j) = -inverse_jacobian(i, j)*eta_to_x_component
+        x_to_eta_component(i, j) = -inverse_jacobian(i, j)*xi_to_y_component
+        y_to_eta_component(i, j) = inverse_jacobian(i, j)*xi_to_x_component
       end do
     end do
     !$omp end parallel do
