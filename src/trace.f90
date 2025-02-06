@@ -2399,7 +2399,7 @@ contains
     ! ポリラインの長さの最小値と最大値を計算
     !==========================================================================
     ! ポリラインが一つでもある場合にのみ計算
-    if (minval(windmap%windmap_save_times) >= 2) then
+    if (maxval(windmap%windmap_save_times) >= 2) then
       polyline_length_min = minval(windmap%windmap_line_length, mask=windmap%windmap_line_length /= 0.0)
       polyline_length_max = maxval(windmap%windmap_line_length, mask=windmap%windmap_line_length /= 0.0)
     end if
