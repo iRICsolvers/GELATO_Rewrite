@@ -197,12 +197,18 @@ module trace
 
     !> windmapラインの最大数
     integer:: max_number
-    !> windmapラインの最大保存回数
-    integer:: max_save_times
     !> windmapラインの寿命(時間)
     real(8):: life_time
     !> windmapラインの保存間隔
     real(8):: line_save_interval
+
+    !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ! 共通の変数
+    !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    !> windmapラインの最大保存回数
+    integer:: max_save_times
+    !> windmapのラインを何回追跡したら保存するか
+    integer:: save_times_interval
 
     !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     ! トレーサーの属性
@@ -214,8 +220,10 @@ module trace
 
     !> windmapラインを何回保存したか
     integer, dimension(:), allocatable :: windmap_save_times
+    !> windmapラインの年齢
+    integer, dimension(:), allocatable :: windmap_life_timer
     !> windmapラインの保存用タイマー
-    real(8), dimension(:), allocatable :: windmap_save_timer
+    integer, dimension(:), allocatable :: windmap_save_timer
 
     !> windmapラインのx座標
     real(8), dimension(:, :), allocatable :: windmap_coordinate_x
@@ -2037,12 +2045,20 @@ contains
     call cg_iric_read_real(cgnsOut, "display_life_span_windmap_line", windmap%life_time, is_error)
     call cg_iric_read_real(cgnsOut, "save_interval_windmap_line", windmap%line_save_interval, is_error)
 
-    ! windmapの最大保存回数
-    windmap%max_save_times = int(windmap%life_time/windmap%line_save_interval)
+    ! windmapの最大保存回数(初期位置も保存するため1多く)
+    windmap%max_save_times = int(windmap%life_time/windmap%line_save_interval) + 1
+    ! windmapの最大保存回数が0以下の場合は1にする
+    if (windmap%max_save_times <= 0) windmap%max_save_times = 2
+
+    ! 何回追跡したら軌跡を保存するか
+    windmap%save_times_interval = int(windmap%line_save_interval/time_interval_for_tracking)
+    ! 保存回数が0以下の場合は1にする
+    if (windmap%save_times_interval <= 0) windmap%save_times_interval = 1
 
     allocate (windmap%tracer_coordinate_xi(windmap%max_number))
     allocate (windmap%tracer_coordinate_eta(windmap%max_number))
     allocate (windmap%windmap_save_times(windmap%max_number))
+    allocate (windmap%windmap_life_timer(windmap%max_number))
     allocate (windmap%windmap_save_timer(windmap%max_number))
     allocate (windmap%windmap_coordinate_x(windmap%max_save_times, windmap%max_number))
     allocate (windmap%windmap_coordinate_y(windmap%max_save_times, windmap%max_number))
@@ -2051,7 +2067,7 @@ contains
     windmap%tracer_coordinate_xi = 0.0
     windmap%tracer_coordinate_eta = 0.0
     windmap%windmap_save_times = 0
-    windmap%windmap_save_timer = 0.0
+    windmap%windmap_save_timer = 0
     windmap%windmap_coordinate_x = 0.0
     windmap%windmap_coordinate_y = 0.0
     windmap%windmap_line_length = 0.0
@@ -2103,6 +2119,9 @@ contains
 
     integer:: i
 
+    !> windmapトレーサーが追加されてからの時間をバラつかせるための乱数
+    real(8) :: random_number_for_life_timer
+
     !==========================================================================================
     ! トレーサー追加先の座標を障害物ではないランダムな場所から探す
     !==========================================================================================
@@ -2139,8 +2158,11 @@ contains
     !==========================================================================================
     ! windmap_save_timesを更新
     windmap%windmap_save_times(tracer_index) = 1
+    ! windmap_life_timerを1~max_save_times-1の間でランダムに設定
+    call random_number(random_number_for_life_timer)
+    windmap%windmap_life_timer(tracer_index) = int(random_number_for_life_timer*(windmap%max_save_times - 2)) + 1
     ! windmap_save_timerをリセット
-    windmap%windmap_save_timer(tracer_index) = 0.0
+    windmap%windmap_save_timer(tracer_index) = 0
     ! windmap_coordinate_x, windmap_coordinate_yをリセット
     windmap%windmap_coordinate_x(:, tracer_index) = 0.0
     windmap%windmap_coordinate_y(:, tracer_index) = 0.0
@@ -2214,14 +2236,14 @@ contains
     !==========================================================================================
     ! トレーサーの寿命をチェックして寿命を超えたら再配置
     !==========================================================================================
-    ! windmap_save_timerを更新
-    call increment_real_value(windmap%windmap_save_timer(tracer_index), time_interval_for_tracking)
-
-    ! windmap_save_timerが寿命を超えたら再配置
-    if (windmap%windmap_save_timer(tracer_index) > windmap%life_time) then
+    ! windmap_life_timerが寿命を超えたら再配置
+    if (windmap%windmap_life_timer(tracer_index) >= windmap%max_save_times) then
       windmap%windmap_save_times(tracer_index) = 0
       return
     end if
+
+    ! windmap_save_timerを更新
+    windmap%windmap_save_timer(tracer_index) = windmap%windmap_save_timer(tracer_index) + 1
 
     !==========================================================================================
     ! トレーサーのあるセルのインデックスを取得
@@ -2304,22 +2326,18 @@ contains
     if (moved_position_eta <= 0.) moved_position_eta = -moved_position_eta
 
     !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    ! 上下流端の周期境界条件による判定
+    ! 上下流端の境界による判定
     !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    if (is_periodic_boundary_condition_Tracers == 1) then
-      ! 周期境界条件の場合は範囲外のトレーサーを移動
-      if (moved_position_xi > 1.0) moved_position_xi = moved_position_xi - 1.
-      if (moved_position_xi < 0.0) moved_position_xi = moved_position_xi + 1.
-    else
-      ! 周期境界じゃない場合範囲外のトレーサーは除去
-      if (moved_position_xi < 0.0 .or. 1.0 + tolerance < moved_position_xi) then
-        windmap%windmap_save_times(tracer_index) = 0
-        return
-      end if
-      ! 精度の誤差によりちょっぴりはみ出ている場合は修正
-      if (1.0 < moved_position_xi .and. moved_position_xi < 1.0 + tolerance) then
-        moved_position_xi = 1.0
-      end if
+
+    ! 範囲外のトレーサーは除去
+    if (moved_position_xi < 0.0 .or. 1.0 + tolerance < moved_position_xi) then
+      windmap%windmap_save_times(tracer_index) = 0
+      return
+    end if
+
+    ! 精度の誤差によりちょっぴりはみ出ている場合は修正
+    if (1.0 < moved_position_xi .and. moved_position_xi < 1.0 + tolerance) then
+      moved_position_xi = 1.0
     end if
 
     !==========================================================================================
@@ -2351,13 +2369,17 @@ contains
     windmap%tracer_coordinate_eta(tracer_index) = moved_position_eta
 
     !==========================================================================================
-    ! 軌跡保存のタイマーを更新、軌跡保存間隔を超えていたら保存＆ラインの長さ計算
+    ! 軌跡保存のタイマーが軌跡保存間隔を超えていたら保存＆ラインの長さ計算
     !==========================================================================================
     ! windmap_save_timerが保存間隔を超えたら保存
-    if (int(windmap%windmap_save_timer(tracer_index)/windmap%line_save_interval) > windmap%windmap_save_times(tracer_index)) then
+    if (windmap%windmap_save_timer(tracer_index) >= windmap%save_times_interval) then
+      ! タイマーをリセット
+      windmap%windmap_save_timer(tracer_index) = 0
 
       ! 保存回数を更新
-      call increment_integer_value(windmap%windmap_save_times(tracer_index), 1)
+      windmap%windmap_save_times(tracer_index) = windmap%windmap_save_times(tracer_index) + 1
+      ! トレーサーの年齢も更新
+      windmap%windmap_life_timer(tracer_index) = windmap%windmap_life_timer(tracer_index) + 1
 
       ! 座標変換して軌跡を保存
       call transform_general_to_physical( &
