@@ -127,6 +127,11 @@ contains
     allocate (elevation_node(node_count_i, node_count_j))
     allocate (elevation_cell(cell_count_i, cell_count_j))
 
+    if (flow_conditions_used_for_tracking == 0) then
+      allocate (velocity_xi_node(node_count_i, node_count_j))
+      allocate (velocity_eta_node(node_count_i, node_count_j))
+    end if
+
     ! hoshino memo
     ! flow_conditions_used_for_trackingに関わらずallocate_result_valueを呼ぶので流量などcgnsから読み込むとき限定の値だけは条件分岐させる
     if (flow_conditions_used_for_tracking == 0) then
