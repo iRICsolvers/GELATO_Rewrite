@@ -6,8 +6,8 @@ contains
 
   !******************************************************************************************
   !> セルの配列の値をノード配列の値に変換する
-  !! @param cell_array セルの値を持つ配列(cell_count_i, cell_count_j)
-  !! @return node_array ノードの値を持つ配列(node_count_i, node_count_j)
+  !> @param cell_array セルの値を持つ配列(cell_count_i, cell_count_j)
+  !> @return node_array ノードの値を持つ配列(node_count_i, node_count_j)
   subroutine cell2node(cell_array, node_array)
 
     !> i方向のセルの数
@@ -57,8 +57,8 @@ contains
 
   !******************************************************************************************
   !> ノード配列の値をセルの配列の値に変換する
-  !! @param node_array ノードの値を持つ配列(node_count_i, node_count_j)
-  !! @return cell_array セルの値を持つ配列(cell_count_i, cell_count_j)
+  !> @param node_array ノードの値を持つ配列(node_count_i, node_count_j)
+  !> @return cell_array セルの値を持つ配列(cell_count_i, cell_count_j)
   subroutine node2cell(node_array, cell_array)
 
     !> i方向の格子点の数
