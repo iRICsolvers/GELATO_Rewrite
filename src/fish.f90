@@ -29,6 +29,10 @@ module fish_module
   integer :: is_jump_fish
   !> 魚の表示サイズ倍率
   real(8) :: fish_display_size_magnification
+
+  !==========================================================================================
+  ! 任意断面を通過した魚をカウントする機能に関する変数
+  !==========================================================================================
   !> 魚の計測を行うかどうか
   integer :: is_count_fish
   !> 魚の計測を行う断面の位置
@@ -39,6 +43,10 @@ module fish_module
   real(8) :: count_time_end
   !> 通過した魚体数のカウンター
   integer, save :: passed_fish_count = 0
+  !> 通過した魚の数をカウントする任意断面ポリラインの座標
+  real(8), dimension(:), allocatable :: count_fish_crossing_section_x
+  !> 通過した魚の数をカウントする任意断面ポリラインの座標
+  real(8), dimension(:), allocatable :: count_fish_crossing_section_y
 
   !******************************************************************************************
   ! 魚のパラメーター
@@ -260,7 +268,42 @@ contains
   end subroutine allocate_fish_tracer
 
   !******************************************************************************************
-  ! @brief 魚トレーサーの初期配置
+  !> @brief 魚をカウントする断面のポリラインの作成する、ポリラインは指定されたインデックスiの格子を通る
+  !******************************************************************************************
+  subroutine create_fish_counting_section()
+
+    !> ループ用の変数
+    integer :: i
+
+    !==========================================================================================
+    ! メモリを確保
+    !==========================================================================================
+    allocate (count_fish_crossing_section_x(node_count_j))
+    allocate (count_fish_crossing_section_y(node_count_j))
+
+    ! 断面iの格子をj方向に通るポリラインを作成
+    ! 格子点の座標の配列をスライスして取得
+    count_fish_crossing_section_x = node_coordinate_x(count_section_position, :)
+    count_fish_crossing_section_y = node_coordinate_y(count_section_position, :)
+
+  end subroutine create_fish_counting_section
+
+  !******************************************************************************************
+  !> @brief 魚をカウントする断面のポリラインの出力
+  !******************************************************************************************
+  subroutine output_fish_counting_section()
+
+    ! ポリライン出力を通知
+    call cg_iric_write_sol_polydata_groupbegin(cgnsOut, 'Fish Count Crossing Section', is_error)
+
+    call cg_iric_write_sol_polydata_polyline(cgnsOut, node_count_j, count_fish_crossing_section_x, count_fish_crossing_section_y, is_error)
+
+    call cg_iric_write_sol_polydata_groupend(cgnsOut, is_error)
+
+  end subroutine output_fish_counting_section
+
+  !******************************************************************************************
+  !> @brief 魚トレーサーの初期配置
   !******************************************************************************************
   subroutine add_fish_tracer()
 
