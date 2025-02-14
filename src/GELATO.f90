@@ -99,6 +99,8 @@ program gelate
   if (is_trace_trajectory == 1) call Initialize_Trajectory_Tracer()
   if (is_draw_windmap == 1) call Initialize_windmap()
   if (is_simulation_fish == 1) call initialize_fish_tracer()
+  ! 魚の数をカウントするセクションのポリゴン形状を作成
+  if (is_simulation_fish == 1 .and. is_count_fish == 1) call create_fish_counting_section()
 
   !******************************************************************************************
   ! 初期状態の計算、アウトプット
@@ -204,6 +206,8 @@ program gelate
   if (is_draw_windmap == 1) call write_sol_windmap()
   ! 魚の出力
   if (is_simulation_fish == 1) call output_fish()
+  ! 魚の数をカウントするセクションのポリゴン形状を出力
+  if (is_simulation_fish == 1 .and. is_count_fish == 1) call output_fish_counting_section()
 
   call cg_iric_write_sol_end(cgnsOut, is_error)
 
@@ -395,6 +399,8 @@ program gelate
         if (is_draw_windmap == 1) call write_sol_windmap()
         ! 魚の出力
         if (is_simulation_fish == 1) call output_fish()
+        ! 魚の数をカウントするセクションのポリゴン形状を出力
+        if (is_simulation_fish == 1 .and. is_count_fish == 1) call output_fish_counting_section()
 
       end if
 

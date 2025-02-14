@@ -29,6 +29,10 @@ module fish_module
   integer :: is_jump_fish
   !> 魚の表示サイズ倍率
   real(8) :: fish_display_size_magnification
+
+  !==========================================================================================
+  ! 任意断面を通過した魚をカウントする機能に関する変数
+  !==========================================================================================
   !> 魚の計測を行うかどうか
   integer :: is_count_fish
   !> 魚の計測を行う断面の位置
@@ -39,6 +43,10 @@ module fish_module
   real(8) :: count_time_end
   !> 通過した魚体数のカウンター
   integer, save :: passed_fish_count = 0
+  !> 通過した魚の数をカウントする任意断面ポリラインの座標
+  real(8), dimension(:), allocatable :: count_fish_crossing_section_x
+  !> 通過した魚の数をカウントする任意断面ポリラインの座標
+  real(8), dimension(:), allocatable :: count_fish_crossing_section_y
 
   !******************************************************************************************
   ! 魚のパラメーター
@@ -127,9 +135,9 @@ contains
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
   !******************************************************************************************
-  ! @brief 配列を大きい順に見たときのインデックスを取得する、ソート対象の配列は変更されない
-  ! @param[in] array ソート対象の配列
-  ! @param[out] indices 大きい順で並べた際のインデックスを格納する配列
+  !> @brief 配列を大きい順に見たときのインデックスを取得する、ソート対象の配列は変更されない
+  !> @param[in] array ソート対象の配列
+  !> @param[out] indices 大きい順で並べた際のインデックスを格納する配列
   !******************************************************************************************
   subroutine get_sorted_indices(array, indices)
     implicit none
@@ -173,7 +181,7 @@ contains
   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
   !******************************************************************************************
-  ! @brief 魚トレーサーの初期化
+  !> @brief 魚トレーサーの初期化
   !******************************************************************************************
   subroutine initialize_fish_tracer()
 
@@ -236,8 +244,8 @@ contains
   end subroutine initialize_fish_tracer
 
   !******************************************************************************************
-  ! @brief 魚トレーサーの初期配置メモリ確保と初期化
-  ! @param[in] fish_count_max 魚の最大数
+  !> @brief 魚トレーサーの初期配置メモリ確保と初期化
+  !> @param[in] fish_count_max 魚の最大数
   !******************************************************************************************
   subroutine allocate_fish_tracer()
 
@@ -260,7 +268,42 @@ contains
   end subroutine allocate_fish_tracer
 
   !******************************************************************************************
-  ! @brief 魚トレーサーの初期配置
+  !> @brief 魚をカウントする断面のポリラインの作成する、ポリラインは指定されたインデックスiの格子を通る
+  !******************************************************************************************
+  subroutine create_fish_counting_section()
+
+    !> ループ用の変数
+    integer :: i
+
+    !==========================================================================================
+    ! メモリを確保
+    !==========================================================================================
+    allocate (count_fish_crossing_section_x(node_count_j))
+    allocate (count_fish_crossing_section_y(node_count_j))
+
+    ! 断面iの格子をj方向に通るポリラインを作成
+    ! 格子点の座標の配列をスライスして取得
+    count_fish_crossing_section_x = node_coordinate_x(count_section_position, :)
+    count_fish_crossing_section_y = node_coordinate_y(count_section_position, :)
+
+  end subroutine create_fish_counting_section
+
+  !******************************************************************************************
+  !> @brief 魚をカウントする断面のポリラインの出力
+  !******************************************************************************************
+  subroutine output_fish_counting_section()
+
+    ! ポリライン出力を通知
+    call cg_iric_write_sol_polydata_groupbegin(cgnsOut, 'Fish Count Crossing Section', is_error)
+
+    call cg_iric_write_sol_polydata_polyline(cgnsOut, node_count_j, count_fish_crossing_section_x, count_fish_crossing_section_y, is_error)
+
+    call cg_iric_write_sol_polydata_groupend(cgnsOut, is_error)
+
+  end subroutine output_fish_counting_section
+
+  !******************************************************************************************
+  !> @brief 魚トレーサーの初期配置
   !******************************************************************************************
   subroutine add_fish_tracer()
 
@@ -389,7 +432,7 @@ contains
   end subroutine add_fish_tracer
 
   !******************************************************************************************
-  ! @brief 魚トレーサーの初期配置(無次元座標の範囲から)
+  !> @brief 魚トレーサーの初期配置(無次元座標の範囲から)
   ! @note とりあえず投入先については障害物のみ考慮、魚をグループ分けしてから限界水深などを考慮する
   !******************************************************************************************
   subroutine add_fish_tracer_with_range()
@@ -507,7 +550,7 @@ contains
   end subroutine add_fish_tracer_with_range
 
   !******************************************************************************************
-  ! @brief 魚トレーサーの初期配置(総数を与えてランダムに配置)
+  !> @brief 魚トレーサーの初期配置(総数を与えてランダムに配置)
   !******************************************************************************************
   subroutine add_fish_tracer_random()
 
@@ -554,7 +597,7 @@ contains
   end subroutine add_fish_tracer_random
 
   !******************************************************************************************
-  ! @brief グループ毎に魚を割り当てる
+  !> @brief グループ毎に魚を割り当てる
   !******************************************************************************************
   subroutine set_fish_group()
     implicit none
@@ -668,7 +711,7 @@ contains
   end subroutine set_fish_group
 
   !******************************************************************************************
-  ! @brief 投入箇所のチェックおよび再配置
+  !> @brief 投入箇所のチェックおよび再配置
   !******************************************************************************************
   subroutine check_fish_initial_position()
 
@@ -915,13 +958,13 @@ contains
   end subroutine check_fish_initial_position
 
   !******************************************************************************************
-  ! @brief 魚が障害物に入った時の処理
-  ! @param[in] i セルのインデックス
-  ! @param[in] j セルのインデックス
-  ! @param[in] xi 魚のξ方向座標
-  ! @param[in] eta 魚のη方向座標
-  ! @param[in] xi_in_cell 魚のセル内ξ方向座標
-  ! @param[in] eta_in_cell 魚のセル内η方向座標
+  !> @brief 魚が障害物に入った時の処理
+  !> @param[in] i セルのインデックス
+  !> @param[in] j セルのインデックス
+  !> @param[in] xi 魚のξ方向座標
+  !> @param[in] eta 魚のη方向座標
+  !> @param[in] xi_in_cell 魚のセル内ξ方向座標
+  !> @param[in] eta_in_cell 魚のセル内η方向座標
   !******************************************************************************************
   subroutine fish_obstacle_handling(fish_index, i, j, xi, eta, xi_in_cell, eta_in_cell)
 
@@ -1276,7 +1319,7 @@ contains
   end subroutine fish_obstacle_handling
 
   !******************************************************************************************
-  ! @brief 魚が障害物に入り除去される場合の処理
+  !> @brief 魚が障害物に入り除去される場合の処理
   !******************************************************************************************
   subroutine remove_fish_in_obstacle(fish_index, i, j, xi, eta)
 
@@ -1305,8 +1348,8 @@ contains
   end subroutine remove_fish_in_obstacle
 
   !******************************************************************************************
-  ! @brief 魚の固有タイマーの更新
-  ! @param[in] fish_index 魚のインデックス
+  !> @brief 魚の固有タイマーの更新
+  !> @param[in] fish_index 魚のインデックス
   !******************************************************************************************
   subroutine update_fish_timer(fish_index)
 
@@ -1324,32 +1367,38 @@ contains
   end subroutine update_fish_timer
 
   !******************************************************************************************
-  ! @brief 任意断面を通過した魚の数を増減させるサブルーチン
-  ! @param[in] previous_i 移動前の魚が存在するセルのインデックス
-  ! @param[in] moved_i 移動後の魚が存在するセルのインデックス
+  !> @brief 任意断面を通過した魚の数を増減させるサブルーチン
+  !> @param[in] previous_i 移動前の魚が存在するセルのインデックス
+  !> @param[in] moved_i 移動後の魚が存在するセルのインデックス
   !******************************************************************************************
-  subroutine count_fish_crossing_section(previous_i, moved_i)
+  subroutine count_fish_crossing_section(previous_i, moved_i, is_periodic_moved)
 
     !> 移動前の魚が存在するセルのインデックス
     integer :: previous_i
     !> 移動後の魚が存在するセルのインデックス
     integer :: moved_i
+    !> 魚が周期境界条件による移動をしたかのフラグ
+    integer :: is_periodic_moved
 
-    ! 下流から上流へ通過した場合は増加する
+    ! 下流から上流へ通過した場合は増加する(ただし、上流端から下流端へ通過した場合は除く)
     if (previous_i >= count_section_position .and. moved_i < count_section_position) then
-      passed_fish_count = passed_fish_count + 1
+      if (is_periodic_moved == 0) then
+        passed_fish_count = passed_fish_count + 1
+      end if
     end if
 
-    ! 上流から下流へ通過した場合は減少する
+    ! 上流から下流へ通過した場合は減少する(ただし、下流端から上流端へ通過した場合は除く)
     if (previous_i < count_section_position .and. moved_i >= count_section_position) then
-      passed_fish_count = passed_fish_count - 1
+      if (is_periodic_moved == 0) then
+        passed_fish_count = passed_fish_count - 1
+      end if
     end if
 
   end subroutine count_fish_crossing_section
 
   !******************************************************************************************
-  ! @brief 魚トレーサーの位置を更新する
-  ! @param[in] time_trace 一度トレーサーが移動した後の時刻
+  !> @brief 魚トレーサーの位置を更新する
+  !> @param[in] time_trace 一度トレーサーが移動した後の時刻
   !******************************************************************************************
   subroutine move_fish_tracer(time_trace)
 
@@ -1437,6 +1486,9 @@ contains
 
     !> 魚の遊泳サイクル内での時間
     real(8) :: fish_timer_in_cycle
+
+    !> 周期境界条件による移動をしたかのフラグ
+    integer :: is_periodic_moved
 
     do fish_index = 1, fish_count
 
@@ -1674,9 +1726,16 @@ contains
       ! 上下流端の周期境界条件による判定
       !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
       if (is_periodic_boundary_condition_fish == 1) then
+        ! 周期境界条件による移動をしたかのフラグをリセット
+        is_periodic_moved = 0
         ! 周期境界条件の場合は範囲外のトレーサーを移動
-        if (moved_position_xi > 1.0) moved_position_xi = moved_position_xi - 1.
-        if (moved_position_xi < 0.0) moved_position_xi = moved_position_xi + 1.
+        if (moved_position_xi > 1.0) then
+          moved_position_xi = moved_position_xi - 1.
+          is_periodic_moved = 1
+        else if (moved_position_xi < 0.0) then
+          moved_position_xi = moved_position_xi + 1.
+          is_periodic_moved = 1
+        end if
       else
         ! 周期境界じゃない場合範囲外のトレーサーは除去
         if (moved_position_xi < 0.0 .or. 1.0 + tolerance < moved_position_xi) then
@@ -1809,9 +1868,16 @@ contains
 
         ! 上下流端の周期境界条件による判定
         if (is_periodic_boundary_condition_fish == 1) then
+          ! 周期境界条件による移動をしたかのフラグをリセット
+          is_periodic_moved = 0
           ! 周期境界条件の場合は範囲外のトレーサーを移動
-          if (moved_position_xi > 1.0) moved_position_xi = moved_position_xi - 1.
-          if (moved_position_xi < 0.0) moved_position_xi = moved_position_xi + 1.
+          if (moved_position_xi > 1.0) then
+            moved_position_xi = moved_position_xi - 1.
+            is_periodic_moved = 1
+          else if (moved_position_xi < 0.0) then
+            moved_position_xi = moved_position_xi + 1.
+            is_periodic_moved = 1
+          end if
         else
           ! 周期境界じゃない場合範囲外のトレーサーは除去
           if (moved_position_xi < 0.0 .or. 1.0 + tolerance < moved_position_xi) then
@@ -1831,6 +1897,16 @@ contains
             moved_position_xi = 1.0
           end if
         end if
+
+        !------------------------------------------------------------------------------------------
+        ! 再移動後の魚の位置のセルのインデックス、セル内の座標を計算
+        !------------------------------------------------------------------------------------------
+        call find_tracer_cell_index(moved_position_xi, &
+                                    moved_position_eta, &
+                                    moved_position_i, &
+                                    moved_position_j, &
+                                    moved_position_xi_in_cell, &
+                                    moved_position_eta_in_cell)
 
       end if
 
@@ -1860,7 +1936,7 @@ contains
       !==========================================================================================
       if (is_count_fish == 1) then
         if (count_time_start <= time_trace + tolerance .and. time_trace <= count_time_end + tolerance) then
-          call count_fish_crossing_section(fish_position_i, moved_position_i)
+          call count_fish_crossing_section(fish_position_i, moved_position_i, is_periodic_moved)
         end if
       end if
     end do
@@ -1868,7 +1944,7 @@ contains
   end subroutine move_fish_tracer
 
   !******************************************************************************************
-  ! @brief 魚のポリゴン形状、各魚の持つ属性の出力
+  !> @brief 魚のポリゴン形状、各魚の持つ属性の出力
   !******************************************************************************************
   subroutine output_fish()
 
@@ -1982,7 +2058,7 @@ contains
   end subroutine output_fish
 
   !******************************************************************************************
-  ! @brief 魚のポリゴン形状を計算する
+  !> @brief 魚のポリゴン形状を計算する
   !******************************************************************************************
   subroutine make_fish_outline(fish_index, fish_position_x, fish_position_y)
 
