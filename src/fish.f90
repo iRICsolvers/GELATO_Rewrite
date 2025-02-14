@@ -1371,21 +1371,27 @@ contains
   !> @param[in] previous_i 移動前の魚が存在するセルのインデックス
   !> @param[in] moved_i 移動後の魚が存在するセルのインデックス
   !******************************************************************************************
-  subroutine count_fish_crossing_section(previous_i, moved_i)
+  subroutine count_fish_crossing_section(previous_i, moved_i, is_periodic_moved)
 
     !> 移動前の魚が存在するセルのインデックス
     integer :: previous_i
     !> 移動後の魚が存在するセルのインデックス
     integer :: moved_i
+    !> 魚が周期境界条件による移動をしたかのフラグ
+    integer :: is_periodic_moved
 
-    ! 下流から上流へ通過した場合は増加する
+    ! 下流から上流へ通過した場合は増加する(ただし、上流端から下流端へ通過した場合は除く)
     if (previous_i >= count_section_position .and. moved_i < count_section_position) then
-      passed_fish_count = passed_fish_count + 1
+      if (is_periodic_moved == 0) then
+        passed_fish_count = passed_fish_count + 1
+      end if
     end if
 
-    ! 上流から下流へ通過した場合は減少する
+    ! 上流から下流へ通過した場合は減少する(ただし、下流端から上流端へ通過した場合は除く)
     if (previous_i < count_section_position .and. moved_i >= count_section_position) then
-      passed_fish_count = passed_fish_count - 1
+      if (is_periodic_moved == 0) then
+        passed_fish_count = passed_fish_count - 1
+      end if
     end if
 
   end subroutine count_fish_crossing_section
@@ -1480,6 +1486,9 @@ contains
 
     !> 魚の遊泳サイクル内での時間
     real(8) :: fish_timer_in_cycle
+
+    !> 周期境界条件による移動をしたかのフラグ
+    integer :: is_periodic_moved
 
     do fish_index = 1, fish_count
 
@@ -1717,9 +1726,16 @@ contains
       ! 上下流端の周期境界条件による判定
       !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
       if (is_periodic_boundary_condition_fish == 1) then
+        ! 周期境界条件による移動をしたかのフラグをリセット
+        is_periodic_moved = 0
         ! 周期境界条件の場合は範囲外のトレーサーを移動
-        if (moved_position_xi > 1.0) moved_position_xi = moved_position_xi - 1.
-        if (moved_position_xi < 0.0) moved_position_xi = moved_position_xi + 1.
+        if (moved_position_xi > 1.0) then
+          moved_position_xi = moved_position_xi - 1.
+          is_periodic_moved = 1
+        else if (moved_position_xi < 0.0) then
+          moved_position_xi = moved_position_xi + 1.
+          is_periodic_moved = 1
+        end if
       else
         ! 周期境界じゃない場合範囲外のトレーサーは除去
         if (moved_position_xi < 0.0 .or. 1.0 + tolerance < moved_position_xi) then
@@ -1852,9 +1868,16 @@ contains
 
         ! 上下流端の周期境界条件による判定
         if (is_periodic_boundary_condition_fish == 1) then
+          ! 周期境界条件による移動をしたかのフラグをリセット
+          is_periodic_moved = 0
           ! 周期境界条件の場合は範囲外のトレーサーを移動
-          if (moved_position_xi > 1.0) moved_position_xi = moved_position_xi - 1.
-          if (moved_position_xi < 0.0) moved_position_xi = moved_position_xi + 1.
+          if (moved_position_xi > 1.0) then
+            moved_position_xi = moved_position_xi - 1.
+            is_periodic_moved = 1
+          else if (moved_position_xi < 0.0) then
+            moved_position_xi = moved_position_xi + 1.
+            is_periodic_moved = 1
+          end if
         else
           ! 周期境界じゃない場合範囲外のトレーサーは除去
           if (moved_position_xi < 0.0 .or. 1.0 + tolerance < moved_position_xi) then
@@ -1874,6 +1897,16 @@ contains
             moved_position_xi = 1.0
           end if
         end if
+
+        !------------------------------------------------------------------------------------------
+        ! 再移動後の魚の位置のセルのインデックス、セル内の座標を計算
+        !------------------------------------------------------------------------------------------
+        call find_tracer_cell_index(moved_position_xi, &
+                                    moved_position_eta, &
+                                    moved_position_i, &
+                                    moved_position_j, &
+                                    moved_position_xi_in_cell, &
+                                    moved_position_eta_in_cell)
 
       end if
 
@@ -1903,7 +1936,7 @@ contains
       !==========================================================================================
       if (is_count_fish == 1) then
         if (count_time_start <= time_trace + tolerance .and. time_trace <= count_time_end + tolerance) then
-          call count_fish_crossing_section(fish_position_i, moved_position_i)
+          call count_fish_crossing_section(fish_position_i, moved_position_i, is_periodic_moved)
         end if
       end if
     end do
