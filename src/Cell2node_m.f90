@@ -5,9 +5,10 @@ module cell2node_m
 contains
 
   !******************************************************************************************
-  !> セルの配列の値をノード配列の値に変換する
+  !> @brief セルの配列の値をノード配列の値に変換する
   !> @param cell_array セルの値を持つ配列(cell_count_i, cell_count_j)
   !> @return node_array ノードの値を持つ配列(node_count_i, node_count_j)
+  !******************************************************************************************
   subroutine cell2node(cell_array, node_array)
 
     !> i方向のセルの数
@@ -56,9 +57,10 @@ contains
   end subroutine cell2node
 
   !******************************************************************************************
-  !> ノード配列の値をセルの配列の値に変換する
+  !> @brief ノード配列の値をセルの配列の値に変換する
   !> @param node_array ノードの値を持つ配列(node_count_i, node_count_j)
   !> @return cell_array セルの値を持つ配列(cell_count_i, cell_count_j)
+  !******************************************************************************************
   subroutine node2cell(node_array, cell_array)
 
     !> i方向の格子点の数
@@ -87,21 +89,5 @@ contains
     end do
 
   end subroutine node2cell
-
-  !----------------------------------------------
-  subroutine cell_1(im, jm, y, y_1)
-    !----------------------------------------------
-    integer::im, jm, i, j
-    real(8), dimension(im, jm), intent(in)    :: y
-    real(8), dimension(im - 1, jm - 1), intent(inout) :: y_1
-
-    y_1 = 0.
-    do j = 2, jm
-      do i = 2, im
-        y_1(i - 1, j - 1) = y(i, j)
-      end do
-    end do
-
-  end subroutine cell_1
 
 end module cell2node_m

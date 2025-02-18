@@ -5,7 +5,9 @@ module timer_module
 
 contains
 
-  ! 開始時刻とCPU時間を記録するサブルーチン
+  !******************************************************************************************
+  ! @brief 開始時刻とCPU時間を記録するサブルーチン
+  !******************************************************************************************
   subroutine start_timer()
     call system_clock(count_rate=clock_rate)  ! クロックの単位時間を取得
     call system_clock(start_clock)  ! スタート時点のクロックを取得
@@ -13,7 +15,9 @@ contains
     print *, 'Program started...'
   end subroutine start_timer
 
-  ! 終了時に経過時間とCPU時間を計算して出力するサブルーチン
+  !******************************************************************************************
+  ! @brief 終了時に経過時間とCPU時間を計算して出力するサブルーチン
+  !******************************************************************************************
   subroutine end_timer()
     integer :: end_clock, elapsed_hours, elapsed_minutes, fraction_seconds_int
     real(8) :: end_cpu_time, elapsed_time, cpu_elapsed_time
