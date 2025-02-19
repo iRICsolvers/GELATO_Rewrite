@@ -90,8 +90,10 @@ module fish_module
   real(8), dimension(:), allocatable :: jumpable_height
   !> ジャンプ可能な距離
   real(8), dimension(:), allocatable :: jumpable_distance
-  !> ジャンプ中に色が変わる時間
-  real(8), dimension(:), allocatable :: color_changing_time_during_jump
+  !> @brief ジャンプ失敗時の挙動
+  !> @param 0: その場に留まる
+  !> @param 1: 泳ぎによる遡上を試みる
+  integer, dimension(:), allocatable :: fish_handling_when_jumping_failed
 
   !******************************************************************************************
   ! 魚のポリゴン形状等に関するパラメータ
@@ -115,16 +117,19 @@ module fish_module
   real(8), dimension(:), allocatable :: fish_coordinate_eta
   !> 魚のアングル(radian)(0=x軸方向)(0~2π)
   real(8), dimension(:), allocatable :: fish_angle
-  !> 魚の最小水深以下での滞在時間
+  !> 魚の最小水深以下での行動経過時間
   real(8), dimension(:), allocatable :: fish_stay_time_in_critical_depth
-  !> ジャンプ後の経過時間
-  real(8), dimension(:), allocatable :: after_jump_timer
   !> どのグループに属するか
   integer, dimension(:), allocatable :: fish_group
   !> 魚の生存フラグ
   integer, dimension(:), allocatable :: is_fish_alived
   !> 魚の固有タイマー
   real(8), dimension(:), allocatable :: fish_timer
+  !> @brief 魚がジャンプしたか、失敗したかのフラグ、一度出力したらリセットされる
+  !> @param 0: 魚はジャンプしていない
+  !> @param 1: 魚はジャンプした
+  !> @param -1: 魚はジャンプに失敗した
+  integer, dimension(:), allocatable :: fish_jump_flag
 
 contains
 
@@ -221,7 +226,7 @@ contains
     allocate (jump_try_height(fish_group_count))
     allocate (jumpable_height(fish_group_count))
     allocate (jumpable_distance(fish_group_count))
-    allocate (color_changing_time_during_jump(fish_group_count))
+    allocate (fish_handling_when_jumping_failed(fish_group_count))
 
     ! 各グループの魚のパラメーターを読み込む
     do i = 1, fish_group_count
@@ -238,7 +243,7 @@ contains
       call cg_iric_read_complex_real(cgnsOut, 'fish_information_list', i, 'jump_try_height', jump_try_height(i), is_error)
       call cg_iric_read_complex_real(cgnsOut, 'fish_information_list', i, 'jumpable_height', jumpable_height(i), is_error)
       call cg_iric_read_complex_real(cgnsOut, 'fish_information_list', i, 'jumpable_distance', jumpable_distance(i), is_error)
-      call cg_iric_read_complex_real(cgnsOut, 'fish_information_list', i, 'color_changing_time_during_jump', color_changing_time_during_jump(i), is_error)
+      call cg_iric_read_complex_integer(cgnsOut, 'fish_information_list', i, 'fish_handling_when_jumping_failed', fish_handling_when_jumping_failed(i), is_error)
     end do
 
   end subroutine initialize_fish_tracer
@@ -264,6 +269,12 @@ contains
     fish_group = 0
     is_fish_alived = 1
     fish_timer = 0.0
+
+    ! ジャンプする場合はフラグのメモリを確保
+    if (is_jump_fish == 1) then
+      allocate (fish_jump_flag(fish_count_max))
+      fish_jump_flag = 0
+    end if
 
   end subroutine allocate_fish_tracer
 
@@ -1348,7 +1359,7 @@ contains
   end subroutine remove_fish_in_obstacle
 
   !******************************************************************************************
-  !> @brief 魚の固有タイマーの更新
+  !> @brief 魚の最小水深以下滞在時間タイマーの更新
   !> @param[in] fish_index 魚のインデックス
   !******************************************************************************************
   subroutine update_fish_timer(fish_index)
@@ -1370,15 +1381,16 @@ contains
   !> @brief 任意断面を通過した魚の数を増減させるサブルーチン
   !> @param[in] previous_i 移動前の魚が存在するセルのインデックス
   !> @param[in] moved_i 移動後の魚が存在するセルのインデックス
+  !> @param[in] is_periodic_moved 魚が周期境界条件による移動をしたかのフラグ
   !******************************************************************************************
   subroutine count_fish_crossing_section(previous_i, moved_i, is_periodic_moved)
 
     !> 移動前の魚が存在するセルのインデックス
-    integer :: previous_i
+    integer, intent(in) :: previous_i
     !> 移動後の魚が存在するセルのインデックス
-    integer :: moved_i
+    integer, intent(in) :: moved_i
     !> 魚が周期境界条件による移動をしたかのフラグ
-    integer :: is_periodic_moved
+    integer, intent(in) :: is_periodic_moved
 
     ! 下流から上流へ通過した場合は増加する(ただし、上流端から下流端へ通過した場合は除く)
     if (previous_i >= count_section_position .and. moved_i < count_section_position) then
@@ -1395,6 +1407,64 @@ contains
     end if
 
   end subroutine count_fish_crossing_section
+
+  !******************************************************************************************
+  !> @brief 魚の周期境界条件による移動を処理する
+  !> @param[in] fish_index 魚のインデックス
+  !> @param[inout] fish_position_xi 魚のξ方向座標
+  !> @param[inout] fish_position_eta 魚のη方向座標
+  !> @param[out] is_periodic_moved 周期境界条件による移動をしたかのフラグ
+  !******************************************************************************************
+  subroutine fish_periodic_handling(fish_index, fish_position_xi, fish_position_eta, is_periodic_moved)
+
+    !> 魚のインデックス
+    integer, intent(in) :: fish_index
+    !> 魚のξ方向座標
+    real(8), intent(inout) :: fish_position_xi
+    !> 魚のη方向座標
+    real(8), intent(inout) :: fish_position_eta
+    !> 魚が周期境界条件による移動をしたかのフラグ
+    integer, intent(out) :: is_periodic_moved
+
+    !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ! 側面の壁では反射する
+    !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    if (fish_position_eta >= 1.0) fish_position_eta = 1.0 - (fish_position_eta - 1.0)
+    if (fish_position_eta <= 0.0) fish_position_eta = -fish_position_eta
+
+    !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ! 上下流端の周期境界条件による判定
+    !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    if (is_periodic_boundary_condition_fish == 1) then
+      ! 周期境界条件による移動をしたかのフラグをリセット
+      is_periodic_moved = 0
+      ! 周期境界条件の場合は範囲外のトレーサーを移動
+      if (fish_position_xi > 1.0) then
+        fish_position_xi = fish_position_xi - 1.
+        is_periodic_moved = 1
+      else if (fish_position_xi < 0.0) then
+        fish_position_xi = fish_position_xi + 1.
+        is_periodic_moved = 1
+      end if
+    else
+      ! 周期境界じゃない場合範囲外のトレーサーは除去
+      if (fish_position_xi < 0.0 .or. 1.0 + tolerance < fish_position_xi) then
+        is_fish_alived(fish_index) = 0
+
+        ! 座標を更新しておく
+        fish_coordinate_xi(fish_index) = fish_position_xi
+        fish_coordinate_eta(fish_index) = fish_position_eta
+        ! 除去された魚のインデックス、座標、理由を表示
+        print '(A, I4, A, F10.5, A, F10.5)', 'Fish ', fish_index, ' was removed because it went out of range.'
+
+      else if (fish_position_xi > 1.0 .and. fish_position_xi < 1.0 + tolerance) then
+        ! 精度の誤差によりちょっぴりはみ出ている場合は修正
+        fish_position_xi = 1.0
+      end if
+
+    end if
+
+  end subroutine fish_periodic_handling
 
   !******************************************************************************************
   !> @brief 魚トレーサーの位置を更新する
@@ -1418,6 +1488,8 @@ contains
     real(8) :: fish_position_eta_in_cell
     !> 移動前の魚の位置の水深
     real(8) :: fish_point_depth
+    !> 移動前の魚の位置の水位
+    real(8) :: fish_point_water_level
     !> 移動前の魚の位置の物理座標での流速
     real(8) :: fish_point_velocity_x
     !> 移動前の魚の位置の物理座標での流速
@@ -1449,6 +1521,9 @@ contains
     real(8) :: moved_position_eta_in_cell
     !> 移動後の魚の位置の水深
     real(8) :: moved_fish_point_depth
+
+    !> ひとつ上のセルの水位
+    real(8) :: upper_point_water_level
 
     !> トレーサー地点の渦動粘性係数
     real(8) :: tracer_point_eddy_viscosity_coefficient
@@ -1490,22 +1565,34 @@ contains
     !> 周期境界条件による移動をしたかのフラグ
     integer :: is_periodic_moved
 
+    !> 魚が突進モードかのフラグ
+    integer :: is_fish_rush_mode
+
     do fish_index = 1, fish_count
 
+      !==========================================================================================
+      ! 魚の移動前に魚の状態を確認する
+      !==========================================================================================
+
+      !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
       ! 魚の生存フラグが立っていない場合はスキップ
+      !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
       if (is_fish_alived(fish_index) == 0) cycle
 
-      ! 魚の挙動が最小水深以下での挙動をするかのフラグをリセット
+      !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      ! 魚の挙動が前回から引き続き最小水深以下での挙動をするかのフラグをチェック
+      !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      ! 一度フラグをリセット
       is_fish_in_critical_depth = 0
 
-      ! 魚の挙動フラグをチェック
+      ! 最小水深以下での行動タイマーがスタートしていて行動継続時間内の場合フラグを立てる
       if (fish_stay_time_in_critical_depth(fish_index) > 0.0 .and. fish_stay_time_in_critical_depth(fish_index) < behavior_time_in_critical_depth(fish_group(fish_index))) then
         is_fish_in_critical_depth = 1
       end if
 
-      !==========================================================================================
-      ! 魚の位置の座標、水深、流速などを計算
-      !==========================================================================================
+      !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      ! 魚の位置のインデックスを計算
+      !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
       ! 移動前の魚の存在するセルのインデックス、セル内の座標を計算
       call find_tracer_cell_index(fish_coordinate_xi(fish_index), &
                                   fish_coordinate_eta(fish_index), &
@@ -1514,6 +1601,9 @@ contains
                                   fish_position_xi_in_cell, &
                                   fish_position_eta_in_cell)
 
+      !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      ! 魚の位置の水深や流速を計算
+      !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
       ! 移動前の魚の位置の水深を計算
       fish_point_depth = calculate_scalar_at_tracer_position(depth_node, &
                                                              fish_position_i, &
@@ -1552,6 +1642,88 @@ contains
           ! 魚が最小水深以下での挙動をするかのフラグを立てる
           is_fish_in_critical_depth = 1
 
+        end if
+      end if
+
+      !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      ! 魚の遊泳・突進サイクル内での時間を計算　突進モードかどうかを判定
+      !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      fish_timer_in_cycle = mod(fish_timer(fish_index), fish_cycle_time(fish_group(fish_index))) + tolerance
+
+      if (fish_timer_in_cycle > fish_cruise_time(fish_group(fish_index))) then ! ! 突進状態の場合
+        is_fish_rush_mode = 1
+      else ! 遊泳状態の場合
+        is_fish_rush_mode = 0
+      end if
+
+      ! fish_timer(fish_index)を使う部分は終わったので更新しておく
+      fish_timer(fish_index) = fish_timer(fish_index) + time_interval_for_tracking
+
+      !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      ! 魚の泳ぐ速度の基準値を決定
+      !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      if (is_fish_rush_mode == 1) then ! 突進状態の場合
+
+        fish_swim_speed = fish_rush_speed(fish_group(fish_index))
+
+      else ! 遊泳状態の場合
+
+        fish_swim_speed = fish_cruise_speed(fish_group(fish_index))
+
+      end if
+
+      !==========================================================================================
+      ! ジャンプするかどうかの判定
+      ! 0. 魚がジャンプモードでない場合はスキップ
+      ! 1. 魚が突進モードかつ突進モードに入ってから2回目の移動までの間
+      ! 2. 魚の現在位置とひとつ上のセルの水位差がジャンプ検討水位差以上かつ、ジャンプ可能水位差以内
+      ! 3. 最小水深以下の動作をしない場合
+      ! 4. 一番上流のセルにいる場合はジャンプしない
+      !==========================================================================================
+      if (is_jump_fish == 1 .and. is_fish_in_critical_depth == 0 .and. fish_position_i > 1) then
+        if (is_fish_rush_mode == 1 .and. fish_timer_in_cycle <= fish_cruise_time(fish_group(fish_index)) + time_interval_for_tracking*2 + tolerance) then
+
+          ! 魚の現在位置での水位を計算
+          fish_point_water_level = calculate_scalar_at_tracer_position(water_level_node, &
+                                                                       fish_position_i, &
+                                                                       fish_position_j, &
+                                                                       fish_position_xi_in_cell, &
+                                                                       fish_position_eta_in_cell)
+
+          ! ひとつ上のセルの水位を計算
+          upper_point_water_level = calculate_scalar_at_tracer_position(water_level_node, &
+                                                                        fish_position_i - 1, &
+                                                                        fish_position_j, &
+                                                                        fish_position_xi_in_cell, &
+                                                                        fish_position_eta_in_cell)
+
+          ! 魚の現在位置とひとつ上のセルの水位差がジャンプ検討水位差以上
+          if (upper_point_water_level - fish_point_water_level >= jump_try_height(fish_group(fish_index))) then
+
+            ! ジャンプ検討に入ったのでジャンプ検討フラグを立てる
+            ! ジャンプしたら1になるが、検討してジャンプしなければ-1のまま
+            fish_jump_flag(fish_index) = -1
+
+            !ジャンプ可能水位差以内の場合ジャンプする、水位差が大きい場合はジャンプせずその場に留まる
+            if (upper_point_water_level - fish_point_water_level <= jumpable_height(fish_group(fish_index))) then
+
+              ! ジャンプしたのでジャンプ成功フラグを立てる
+              fish_jump_flag(fish_index) = 1
+              ! ジャンプの処理
+              call jump_fish(time_trace, fish_index, fish_position_i, fish_position_j, fish_position_xi_in_cell, fish_position_eta_in_cell)
+              ! ジャンプした後に移動しない場合はこのcycleで終了、ジャンプ後に移動する場合はcycleをコメントアウト
+              cycle
+
+            else if (fish_handling_when_jumping_failed(fish_group(fish_index)) == 0) then
+
+              ! ジャンプに失敗した場合、その場に留まる
+              fish_angle(fish_index) = fish_angle(fish_index)
+              ! 移動しないので次の魚へ
+              cycle
+
+            end if
+
+          end if
         end if
       end if
 
@@ -1627,34 +1799,12 @@ contains
       diffusion_move_speed_y = bm_standard_normal_sin*diffusion_std_dev/time_interval_for_tracking
 
       !==========================================================================================
-      ! 魚の泳ぐ速度を決定
+      ! 魚の状態によって魚のアングルと最終的な移動速度を決定
       !==========================================================================================
-      !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-      ! 魚の泳ぐ速度の基準値を決定
-      !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-      ! 遊泳状態か突進状態かを判定
-      fish_timer_in_cycle = mod(fish_timer(fish_index), fish_cycle_time(fish_group(fish_index))) + tolerance
-
-      if (fish_timer_in_cycle <= fish_cruise_time(fish_group(fish_index))) then ! 遊泳状態の場合
-
-        fish_swim_speed = fish_cruise_speed(fish_group(fish_index))
-
-      else ! 突進状態の場合
-
-        fish_swim_speed = fish_rush_speed(fish_group(fish_index))
-
-      end if
-
-      ! fish_timer(fish_index)を使う部分は終わったので更新しておく
-      fish_timer(fish_index) = fish_timer(fish_index) + time_interval_for_tracking
-
-      !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-      ! 魚の状態によって魚のアングルと速度を決定
-      !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
       if (is_fish_in_critical_depth == 1) then
-        !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
         ! 最小水深以下での挙動をする場合
-        !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
         ! 魚の固有タイマーを更新
         call update_fish_timer(fish_index)
@@ -1685,16 +1835,18 @@ contains
         end if
 
       else
-        !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
         ! 通常時
-        !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
         ! 魚は遡上するので向きを流向と逆方向に設定
         fish_angle(fish_index) = mod(fish_point_flow_angle + pi, 2*pi)
 
       end if
 
-      ! 魚の向きに基づいて速度を設定
+      !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      ! 魚の向きに基づいて魚の遊泳速度を設定
+      !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
       fish_swim_speed_x = fish_swim_speed*cos(fish_angle(fish_index))
       fish_swim_speed_y = fish_swim_speed*sin(fish_angle(fish_index))
 
@@ -1717,44 +1869,11 @@ contains
       moved_position_eta = fish_coordinate_eta(fish_index) + fish_net_speed_eta*time_interval_for_tracking
 
       !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-      ! 側面の壁では反射する
+      ! 周期境界条件での移動のチェック、移動
       !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-      if (moved_position_eta >= 1.0) moved_position_eta = 1.0 - (moved_position_eta - 1.0)
-      if (moved_position_eta <= 0.0) moved_position_eta = -moved_position_eta
-
-      !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-      ! 上下流端の周期境界条件による判定
-      !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-      if (is_periodic_boundary_condition_fish == 1) then
-        ! 周期境界条件による移動をしたかのフラグをリセット
-        is_periodic_moved = 0
-        ! 周期境界条件の場合は範囲外のトレーサーを移動
-        if (moved_position_xi > 1.0) then
-          moved_position_xi = moved_position_xi - 1.
-          is_periodic_moved = 1
-        else if (moved_position_xi < 0.0) then
-          moved_position_xi = moved_position_xi + 1.
-          is_periodic_moved = 1
-        end if
-      else
-        ! 周期境界じゃない場合範囲外のトレーサーは除去
-        if (moved_position_xi < 0.0 .or. 1.0 + tolerance < moved_position_xi) then
-          is_fish_alived(fish_index) = 0
-
-          ! 座標を更新しておく
-          fish_coordinate_xi(fish_index) = moved_position_xi
-          fish_coordinate_eta(fish_index) = moved_position_eta
-          ! 除去された魚のインデックス、座標、理由を表示
-          print '(A, I4, A, F10.5, A, F10.5)', 'Fish ', fish_index, ' was removed because it went out of range.'
-
-          cycle
-
-        end if
-        ! 精度の誤差によりちょっぴりはみ出ている場合は修正
-        if (moved_position_xi > 1.0 .and. moved_position_xi < 1.0 + tolerance) then
-          moved_position_xi = 1.0
-        end if
-      end if
+      call fish_periodic_handling(fish_index, moved_position_xi, moved_position_eta, is_periodic_moved)
+      ! 周期境界条件の中で魚が除去された場合は次の魚へ
+      if (is_fish_alived(fish_index) == 0) cycle
 
       !==========================================================================================
       ! 移動後の魚の位置のセルのインデックス、セル内の座標を計算
@@ -1781,8 +1900,9 @@ contains
       !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
       ! 移動後の魚の位置が最小水深以下の場合、魚の位置を移動前に戻して挙動に応じた位置に再移動する
       ! ただし、再配置後の位置が最小水深以下の場合はそのまま移動しない
+      ! また、すでに最小水深以下での挙動をしている場合は再移動しない
       !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-      if (moved_fish_point_depth < movable_critical_depth_fish(fish_group(fish_index))) then
+      if (moved_fish_point_depth < movable_critical_depth_fish(fish_group(fish_index)) .and. is_fish_in_critical_depth == 0) then
 
         ! 魚の位置を移動前に戻す
         moved_position_xi = fish_coordinate_xi(fish_index)
@@ -1794,11 +1914,8 @@ contains
                                     moved_position_xi_in_cell, &
                                     moved_position_eta_in_cell)
 
-        ! ここではじめて最小水深以下に入った場合のみタイマーを更新する
-        if (is_fish_in_critical_depth == 0) then
-          ! 魚の固有タイマーを更新
-          call update_fish_timer(fish_index)
-        end if
+        ! 魚の固有タイマーを更新
+        call update_fish_timer(fish_index)
 
         !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         ! 再移動のために挙動に応じて魚の向きを変える
@@ -1823,15 +1940,9 @@ contains
 
         else if (fish_handling_in_critical_depth(fish_group(fish_index)) == 3) then   ! ランダムに泳ぐ場合
 
-          ! 初めて最小水深以下に入った場合のみランダムな方向に向きを変える
-          if (is_fish_in_critical_depth == 0) then
-            ! 魚の方向を±90度の範囲を標準偏差とする正規分布に従う乱数でに変更(標準偏差pi/2.0)
-            call random_number(rand_num)
-            fish_angle(fish_index) = fish_angle(fish_index) + pi/2.0*sqrt(-2.0*log(rand_num))*cos(2.0*pi*rand_num)
-          end if
-
-          ! もともと最小水深以下での挙動をしていた場合は向きを維持
-          ! fish_angle(fish_index) = fish_angle(fish_index)
+          ! 魚の方向を±90度の範囲を標準偏差とする正規分布に従う乱数でに変更(標準偏差pi/2.0)
+          call random_number(rand_num)
+          fish_angle(fish_index) = fish_angle(fish_index) + pi/2.0*sqrt(-2.0*log(rand_num))*cos(2.0*pi*rand_num)
 
         end if
 
@@ -1862,41 +1973,9 @@ contains
         !------------------------------------------------------------------------------------------
         ! 領域の境界における処理
         !------------------------------------------------------------------------------------------
-        ! 側面の壁では反射する
-        if (moved_position_eta >= 1.) moved_position_eta = 1.-(moved_position_eta - 1.)
-        if (moved_position_eta <= 0.) moved_position_eta = -moved_position_eta
-
-        ! 上下流端の周期境界条件による判定
-        if (is_periodic_boundary_condition_fish == 1) then
-          ! 周期境界条件による移動をしたかのフラグをリセット
-          is_periodic_moved = 0
-          ! 周期境界条件の場合は範囲外のトレーサーを移動
-          if (moved_position_xi > 1.0) then
-            moved_position_xi = moved_position_xi - 1.
-            is_periodic_moved = 1
-          else if (moved_position_xi < 0.0) then
-            moved_position_xi = moved_position_xi + 1.
-            is_periodic_moved = 1
-          end if
-        else
-          ! 周期境界じゃない場合範囲外のトレーサーは除去
-          if (moved_position_xi < 0.0 .or. 1.0 + tolerance < moved_position_xi) then
-            is_fish_alived(fish_index) = 0
-
-            ! 座標を更新しておく
-            fish_coordinate_xi(fish_index) = moved_position_xi
-            fish_coordinate_eta(fish_index) = moved_position_eta
-            ! 除去された魚のインデックス、座標、理由を表示
-            print '(A, I4, A, F10.5, A, F10.5)', 'Fish ', fish_index, ' was removed because it went out of range.'
-
-            cycle
-
-          end if
-          ! 精度の誤差によりちょっぴりはみ出ている場合は修正
-          if (moved_position_xi > 1.0 .and. moved_position_xi < 1.0 + tolerance) then
-            moved_position_xi = 1.0
-          end if
-        end if
+        call fish_periodic_handling(fish_index, moved_position_xi, moved_position_eta, is_periodic_moved)
+        ! 周期境界条件の中で魚が除去された場合は次の魚へ
+        if (is_fish_alived(fish_index) == 0) cycle
 
         !------------------------------------------------------------------------------------------
         ! 再移動後の魚の位置のセルのインデックス、セル内の座標を計算
@@ -1942,6 +2021,123 @@ contains
     end do
 
   end subroutine move_fish_tracer
+
+  !******************************************************************************************
+  !> @brief 魚のジャンプ処理
+  !> @param[in] time_trace トレーサー追跡用の現在の時間
+  !> @param[in] fish_index 魚のインデックス
+  !> @param[inout] fish_position_i 魚の存在するセルのインデックス
+  !> @param[inout] fish_position_j 魚の存在するセルのインデックス
+  !> @param[inout] fish_position_xi_in_cell 魚の存在するセル内のξ方向座標
+  !> @param[inout] fish_position_eta_in_cell 魚の存在するセル内のη方向座標
+  !******************************************************************************************
+  subroutine jump_fish(time_trace, fish_index, fish_position_i, fish_position_j, fish_position_xi_in_cell, fish_position_eta_in_cell)
+
+    !> 一度トレーサーが移動した後の時刻
+    real(8), intent(in) :: time_trace
+
+    !> 魚のインデックス
+    integer, intent(in) :: fish_index
+    !> 魚の存在するセルのインデックス
+    integer, intent(inout) :: fish_position_i
+    !> 魚の存在するセルのインデックス
+    integer, intent(inout) :: fish_position_j
+    !> 魚の存在するセル内のξ方向座標
+    real(8), intent(inout) :: fish_position_xi_in_cell
+    !> 魚の存在するセル内のη方向座標
+    real(8), intent(inout) :: fish_position_eta_in_cell
+
+    !> 魚のジャンプ後の位置の一般座標
+    real(8) :: jumped_position_xi
+    !> 魚のジャンプ後の位置の一般座標
+    real(8) :: jumped_position_eta
+    !> 魚のジャンプ後の位置のセルのインデックス
+    integer :: jumped_position_i
+    !> 魚のジャンプ後の位置のセルのインデックス
+    integer :: jumped_position_j
+    !> 魚のジャンプ後の位置のセル内のξ方向座標
+    real(8) :: jumped_position_xi_in_cell
+    !> 魚のジャンプ後の位置のセル内のη方向座標
+    real(8) :: jumped_position_eta_in_cell
+
+    !> 魚の位置のxi方向スケーリングファクタ
+    real(8) :: fish_point_scale_factor_xi
+
+    !> 魚のジャンプ一般座標系距離
+    real(8) :: jumpable_distance_xi
+
+    !> 境界条件による移動のフラグ
+    integer :: is_periodic_moved
+
+    !==========================================================================================
+    ! 魚のジャンプによる移動距離を計算
+    ! 物理座標系距離(jumpable_distance)を一般座標系距離に変換
+    !==========================================================================================
+
+    ! 魚の位置でのスケーリングファクタを計算
+    fish_point_scale_factor_xi = (scale_factor_xi(fish_position_i, fish_position_j + 1)* &
+                                  fish_position_eta_in_cell + &
+                                  scale_factor_xi(fish_position_i, fish_position_j)* &
+                                  (grid_interval_eta - fish_position_eta_in_cell)) &
+                                 /grid_interval_eta
+
+    ! 魚の地点でのxi方向ジャンプ距離を計算
+    jumpable_distance_xi = jumpable_distance(fish_group(fish_index))*fish_point_scale_factor_xi
+
+    !==========================================================================================
+    ! 魚のジャンプ後の位置を計算
+    !==========================================================================================
+    jumped_position_xi = fish_coordinate_xi(fish_index) - jumpable_distance_xi
+    jumped_position_eta = fish_coordinate_eta(fish_index)
+
+    !==========================================================================================
+    ! 境界条件による処理
+    !==========================================================================================
+    call fish_periodic_handling(fish_index, jumped_position_xi, jumped_position_eta, is_periodic_moved)
+    ! 周期境界条件の中で魚が除去された場合は次の魚へ
+    if (is_fish_alived(fish_index) == 0) return
+
+    !==========================================================================================
+    ! 移動後の場所でのチェック・処理
+    !==========================================================================================
+
+    ! 魚のジャンプ後の位置のセルのインデックス、セル内の座標を計算
+    call find_tracer_cell_index(jumped_position_xi, &
+                                jumped_position_eta, &
+                                jumped_position_i, &
+                                jumped_position_j, &
+                                jumped_position_xi_in_cell, &
+                                jumped_position_eta_in_cell)
+
+    ! 魚のジャンプ後の位置が障害物セルにある場合は近くに移動する
+    if (obstacle_cell(jumped_position_i, jumped_position_j) == 1) then
+
+      call fish_obstacle_handling(fish_index, &
+                                  jumped_position_i, jumped_position_j, &
+                                  jumped_position_xi, jumped_position_eta, &
+                                  jumped_position_xi_in_cell, jumped_position_eta_in_cell)
+
+      ! 障害物処理で除去された場合は次の魚へ
+      if (is_fish_alived(fish_index) == 0) return
+
+    end if
+
+    !==========================================================================================
+    ! 任意位置での魚のカウントを行う場合、カウンターを更新
+    !==========================================================================================
+    if (is_count_fish == 1) then
+      if (count_time_start <= time_trace + tolerance .and. time_trace <= count_time_end + tolerance) then
+        call count_fish_crossing_section(fish_position_i, jumped_position_i, is_periodic_moved)
+      end if
+    end if
+
+    !==========================================================================================
+    ! 最終的に決定した魚のジャンプ後の位置を更新
+    !==========================================================================================
+    fish_coordinate_xi(fish_index) = jumped_position_xi
+    fish_coordinate_eta(fish_index) = jumped_position_eta
+
+  end subroutine jump_fish
 
   !******************************************************************************************
   !> @brief 魚のポリゴン形状、各魚の持つ属性の出力
@@ -2039,6 +2235,16 @@ contains
       ! 魚のインデックスを出力（とりあえずデバッグ用として出しておく）
       !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
       call cg_iric_write_sol_polydata_integer(cgnsOut, "Fish Index", fish_index, is_error)
+
+      !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      ! 魚のジャンプ状態を出力
+      ! 魚がジャンプした場合は1、ジャンプに失敗したら-1、そうでない場合は0
+      !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      if (is_jump_fish == 1) then
+        call cg_iric_write_sol_polydata_integer(cgnsOut, "Jump Mode", fish_jump_flag(fish_index), is_error)
+        ! 出力したらフラグをリセット
+        fish_jump_flag(fish_index) = 0
+      end if
 
     end do
 

@@ -72,9 +72,9 @@ module result
   ! 計算して求める値
   !==========================================================================================
   !> 水位を格納する配列(格子点)
-  real(8), dimension(:, :), allocatable :: water_surface_elevation_node
+  real(8), dimension(:, :), allocatable :: water_level_node
   !> 水位を格納する配列(セル)
-  real(8), dimension(:, :), allocatable :: water_surface_elevation_cell
+  real(8), dimension(:, :), allocatable :: water_level_cell
   !> 渦動粘性係数を格納する配列
   real(8), dimension(:, :), allocatable :: eddy_viscosity_coefficient_node
   !> 摩擦速度
@@ -89,7 +89,8 @@ module result
 contains
 
   !******************************************************************************************
-  !> 読み込みに必要な計算結果の名前を取得
+  !> @brief 読み込みに必要な計算結果の名前を取得
+  !******************************************************************************************
   subroutine read_result_name()
 
     implicit none
@@ -115,7 +116,8 @@ contains
   end subroutine read_result_name
 
   !******************************************************************************************
-  !> 変数のメモリを確保
+  !> @brief 変数のメモリを確保
+  !******************************************************************************************
   subroutine allocate_result_value()
 
     implicit none
@@ -141,8 +143,8 @@ contains
       if (is_load_dye_concentration == 1) allocate (dye_concentration_node(node_count_i, node_count_j))
     end if
 
-    allocate (water_surface_elevation_node(node_count_i, node_count_j))
-    allocate (water_surface_elevation_cell(cell_count_i, cell_count_j))
+    allocate (water_level_node(node_count_i, node_count_j))
+    allocate (water_level_cell(cell_count_i, cell_count_j))
     allocate (eddy_viscosity_coefficient_node(node_count_i, node_count_j))
     allocate (u_star_node(node_count_i, node_count_j))
     allocate (u_star_cell(cell_count_i, cell_count_j))
@@ -150,8 +152,9 @@ contains
   end subroutine allocate_result_value
 
   !******************************************************************************************
-  !> 指定されたタイムステップの計算結果を読み込み
+  !> @brief 指定されたタイムステップの計算結果を読み込み
   !> @param step タイムステップ
+  !******************************************************************************************
   subroutine read_sol_result(step)
     implicit none
     !> タイムステップ
@@ -170,7 +173,8 @@ contains
   end subroutine read_sol_result
 
   !******************************************************************************************
-  !> GUIで入力した一定値から計算に使用する値を計算
+  !> @brief GUIで入力した一定値から計算に使用する値を計算
+  !******************************************************************************************
   subroutine read_parameter_for_Trace_from_gui()
     implicit none
     !> GUIから読み込んだ一定流速
@@ -226,7 +230,8 @@ contains
   end subroutine read_parameter_for_Trace_from_gui
 
   !******************************************************************************************
-  !> 計算に使用する値を計算
+  !> @brief 計算に使用する値を計算
+  !******************************************************************************************
   subroutine cal_parameter_for_Trace()
     implicit none
 
@@ -239,7 +244,7 @@ contains
     !==========================================================================================
     ! 水位の計算
     !==========================================================================================
-    water_surface_elevation_node = elevation_node + depth_node
+    water_level_node = elevation_node + depth_node
 
     !==========================================================================================
     ! 摩擦速度、渦動粘性係数の計算
@@ -280,15 +285,16 @@ contains
     ! セルでの河床高、水位、水深、摩擦速度の計算
     !==========================================================================================
     call node2cell(elevation_node, elevation_cell)
-    call node2cell(water_surface_elevation_node, water_surface_elevation_cell)
+    call node2cell(water_level_node, water_level_cell)
     call node2cell(depth_node, depth_cell)
     call node2cell(u_star_node, u_star_cell)
 
   end subroutine cal_parameter_for_Trace
 
   !******************************************************************************************
-  !> 読み込んだ計算結果を出力
+  !> @brief 読み込んだ計算結果を出力
   !> @parm time_step タイムステップ
+  !******************************************************************************************
   subroutine write_sol_result(time_step_in)
     !> メインループで使うループ用変数（読み込む計算結果）
     integer :: time_step_in
@@ -301,7 +307,7 @@ contains
     ! 河床高
     call cg_iRIC_Write_Sol_Node_Real(cgnsOut, 'Elevation', elevation_node, is_error)
     ! 水位
-    call cg_iRIC_Write_Sol_Node_Real(cgnsOut, 'WaterSurface', water_surface_elevation_node, is_error)
+    call cg_iRIC_Write_Sol_Node_Real(cgnsOut, 'WaterSurface', water_level_node, is_error)
     !摩擦速度
     call cg_iRIC_Write_Sol_Node_Real(cgnsOut, 'ShearVelocity', u_star_node, is_error)
     ! 流量

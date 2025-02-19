@@ -3,9 +3,9 @@
 	xmlns="www.iric.net/SolverDefinition/1.0" 
 	name="RE_GELATO" 
 	caption="Re:GELATO" 
-	version="0.0.24021401" 
+	version="0.0.24021902" 
 	copyright="Keita Hoshino" 
-	release="2025.02.14" 
+	release="2025.02.19" 
 	homepage="https://i-ric.org/yasu/" 
 	executable="ReGELATO.exe" 
 	iterationtype="time" 
@@ -859,10 +859,16 @@
 						<Item name="jumpable_distance" caption="Possible jumping distance(m)">
 							<Definition valueType="real" default="0.5"/>
 						</Item>
-
-						<!-- ジャンプ中に色が変わる時間 -->
-						<Item name="color_changing_time_during_jump" caption="Color change time during jumping motion(sec)">
-							<Definition valueType="real" default="1"/>
+						<!-- ジャンプが出来なかった際の動作 -->
+						<Item name="fish_handling_when_jumping_failed" caption="Fish handling when jumping fails">
+							<Definition valueType="integer" default="0">
+								<Enumerations>
+									<!-- その場に留まる -->
+									<Enumeration value="0" caption="Stop"/>
+									<!-- 遊泳による遡上を試みる -->
+									<Enumeration value="1" caption="Continue swimming"/>
+								</Enumerations>
+							</Definition>
 						</Item>
 
 					</Definition>

@@ -50,6 +50,11 @@ program gelate
   !> 停止ボタンが押されたか
   integer :: is_pressed_stop_button
 
+  !> 中心線ポリラインの座標
+  real(8), dimension(:), allocatable :: center_line_coordinate_x
+  !> 中心線ポリラインの座標
+  real(8), dimension(:), allocatable :: center_line_coordinate_y
+
   !******************************************************************************************
   ! メインプログラムスタート　CGNSファイルを開く
   !******************************************************************************************
@@ -90,6 +95,14 @@ program gelate
 
   if (flow_conditions_used_for_tracking == 0) call read_result_name()
   call allocate_result_value()
+
+  !==========================================================================================
+  ! センターラインの座標のメモリ確保、形状作成
+  !==========================================================================================
+  if (is_draw_center_line == 1) then
+    allocate (center_line_coordinate_x(node_count_i), center_line_coordinate_y(node_count_i))
+    call create_center_line()
+  end if
 
   !==========================================================================================
   ! トレーサー・windmap・魚の設定読み込み、初期化
@@ -208,6 +221,8 @@ program gelate
   if (is_simulation_fish == 1) call output_fish()
   ! 魚の数をカウントするセクションのポリゴン形状を出力
   if (is_simulation_fish == 1 .and. is_count_fish == 1) call output_fish_counting_section()
+  ! センターラインの出力
+  if (is_draw_center_line == 1) call output_center_line()
 
   call cg_iric_write_sol_end(cgnsOut, is_error)
 
@@ -404,6 +419,11 @@ program gelate
 
       end if
 
+      !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      ! センターラインの出力
+      !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      if (is_draw_center_line == 1) call output_center_line()
+
       ! 出力終了を宣言
       call cg_iric_write_sol_end(cgnsOut, is_error)
 
@@ -424,6 +444,9 @@ contains
   ! サブルーチン群
   !==========================================================================================
 
+  !******************************************************************************************
+  !> @brief 基本情報のコンソール出力
+  !******************************************************************************************
   subroutine write_msg_Common_Parameter()
     !==========================================================================================
     ! 基本的なパラーメータをコンソールに出力する
@@ -474,6 +497,47 @@ contains
     end if
 
   end subroutine write_msg_Common_Parameter
+
+  !******************************************************************************************
+  !> @brief センターラインのポリゴンを作成する
+  !******************************************************************************************
+  subroutine create_center_line()
+
+    !> j方向の格子点数が奇数か
+    integer :: is_odd
+
+    ! node_count_jが偶数か奇数かを計算
+    is_odd = mod(node_count_j, 2)
+
+    !==========================================================================================
+    ! node_count_jが奇数の時の処理
+    !==========================================================================================
+    if (is_odd == 1) then
+      ! node_coordinate_x, node_coordinate_yのインデックスj_centerの値をcenter_line_codinate_x, center_line_codinate_yにコピー
+      center_line_coordinate_x(:) = node_coordinate_x(:, j_center)
+      center_line_coordinate_y(:) = node_coordinate_y(:, j_center)
+    else
+      !==========================================================================================
+      ! node_count_jが偶数の時の処理
+      !==========================================================================================
+      ! node_codinate_x, node_codinate_yはjcenterとjcenter+1の値の平均をとる
+      center_line_coordinate_x(:) = (node_coordinate_x(:, j_center) + node_coordinate_x(:, j_center + 1))*0.5d0
+      center_line_coordinate_y(:) = (node_coordinate_y(:, j_center) + node_coordinate_y(:, j_center + 1))*0.5d0
+    end if
+  end subroutine create_center_line
+
+  !******************************************************************************************
+  !> @brief センターラインのポリラインの出力
+  !******************************************************************************************
+  subroutine output_center_line()
+
+    call cg_iric_write_sol_polydata_groupbegin(cgnsOut, "Center Line", is_error)
+
+    call cg_iric_write_sol_polydata_polyline(cgnsOut, node_count_i, center_line_coordinate_x, center_line_coordinate_y, is_error)
+
+    call cg_iric_write_sol_polydata_groupend(cgnsOut, is_error)
+
+  end subroutine output_center_line
 
 end program gelate
 

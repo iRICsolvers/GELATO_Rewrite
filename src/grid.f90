@@ -89,7 +89,8 @@ module grid
 contains
 
   !******************************************************************************************
-  !> 出力用格子の読み込みの計算
+  !> @brief 出力用格子の読み込みの計算
+  !******************************************************************************************
   subroutine Load_Grid()
 
     implicit none
@@ -103,7 +104,7 @@ contains
     cell_count_i = node_count_i - 1
     cell_count_j = node_count_j - 1
 
-    j_center = node_count_j/2
+    j_center = ceiling(real(node_count_j)/2.0d0)
 
     !==========================================================================================
     ! メモリ確保
@@ -151,7 +152,8 @@ contains
   end subroutine Load_Grid
 
   !******************************************************************************************
-  !> 物理座標(x,y)と一般座標(ξ,η)を変換するためのパラメータ計算
+  !> @brief 物理座標(x,y)と一般座標(ξ,η)を変換するためのパラメータ計算
+  !******************************************************************************************
   subroutine compute_transform_metrics()
 
     implicit none
@@ -202,6 +204,10 @@ contains
 
     !==========================================================================================
     ! 水路延長、ξ,η方向のスケーリング係数の計算
+    ! grid_physical_distance_xi: ξ方向の物理座標での格子点間距離
+    ! 物理距離 dsに掛けることで、dxiが求まる
+    ! grid_physical_distance_eta: η方向の物理座標での格子点間距離
+    ! 物理距離 dsに掛けることで、detaが求まる
     !==========================================================================================
     !$omp parallel do collapse(2) private(i, j, grid_physical_distance_xi) reduction(min:grid_physical_distance_xi_min) reduction(+:channel_length)
     do j = 1, node_count_j
@@ -226,6 +232,7 @@ contains
 
     !==========================================================================================
     ! ξ、η方向でのx,yの勾配(中央差分方法)
+    ! このコンポーネントは、一般座標の位置を物理座標の位置に変換する際に必要
     !==========================================================================================
     !$omp parallel do collapse(2) private(i, j) shared(node_coordinate_x, node_coordinate_y, x_gradient_in_xi, x_gradient_in_eta, y_gradient_in_xi, y_gradient_in_eta)
     do j = 1, cell_count_j
