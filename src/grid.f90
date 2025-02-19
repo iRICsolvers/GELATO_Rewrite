@@ -103,7 +103,7 @@ contains
     cell_count_i = node_count_i - 1
     cell_count_j = node_count_j - 1
 
-    j_center = node_count_j/2
+    j_center = ceiling(real(node_count_j)/2.0d0)
 
     !==========================================================================================
     ! メモリ確保
