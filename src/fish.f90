@@ -1900,8 +1900,9 @@ contains
       !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
       ! 移動後の魚の位置が最小水深以下の場合、魚の位置を移動前に戻して挙動に応じた位置に再移動する
       ! ただし、再配置後の位置が最小水深以下の場合はそのまま移動しない
+      ! また、すでに最小水深以下での挙動をしている場合は再移動しない
       !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-      if (moved_fish_point_depth < movable_critical_depth_fish(fish_group(fish_index))) then
+      if (moved_fish_point_depth < movable_critical_depth_fish(fish_group(fish_index)) .and. is_fish_in_critical_depth == 0) then
 
         ! 魚の位置を移動前に戻す
         moved_position_xi = fish_coordinate_xi(fish_index)
@@ -1913,11 +1914,8 @@ contains
                                     moved_position_xi_in_cell, &
                                     moved_position_eta_in_cell)
 
-        ! ここではじめて最小水深以下に入った場合のみタイマーを更新する
-        if (is_fish_in_critical_depth == 0) then
-          ! 魚の固有タイマーを更新
-          call update_fish_timer(fish_index)
-        end if
+        ! 魚の固有タイマーを更新
+        call update_fish_timer(fish_index)
 
         !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         ! 再移動のために挙動に応じて魚の向きを変える
@@ -1942,15 +1940,9 @@ contains
 
         else if (fish_handling_in_critical_depth(fish_group(fish_index)) == 3) then   ! ランダムに泳ぐ場合
 
-          ! 初めて最小水深以下に入った場合のみランダムな方向に向きを変える
-          if (is_fish_in_critical_depth == 0) then
-            ! 魚の方向を±90度の範囲を標準偏差とする正規分布に従う乱数でに変更(標準偏差pi/2.0)
-            call random_number(rand_num)
-            fish_angle(fish_index) = fish_angle(fish_index) + pi/2.0*sqrt(-2.0*log(rand_num))*cos(2.0*pi*rand_num)
-          end if
-
-          ! もともと最小水深以下での挙動をしていた場合は向きを維持
-          ! fish_angle(fish_index) = fish_angle(fish_index)
+          ! 魚の方向を±90度の範囲を標準偏差とする正規分布に従う乱数でに変更(標準偏差pi/2.0)
+          call random_number(rand_num)
+          fish_angle(fish_index) = fish_angle(fish_index) + pi/2.0*sqrt(-2.0*log(rand_num))*cos(2.0*pi*rand_num)
 
         end if
 
