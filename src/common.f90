@@ -152,6 +152,16 @@ contains
   !******************************************************************************************
   subroutine read_common_parameter()
 
+    !******************************************************************************************
+    ! 乱数のシード値
+    !******************************************************************************************
+    !> 乱数のシード値
+    integer :: random_seed_number
+    !> 乱数のシード値
+    integer, dimension(:), allocatable :: seed_array
+    !> コンパイラによって異なるランダムシードの配列の長さ
+    integer :: n
+
     time_step_count_in = 0
 
     ! 読み込む計算結果のタイムステップ数
@@ -207,8 +217,12 @@ contains
     end if
 
     ! 乱数のシード値
-    call cg_iric_read_integer(cgnsOut, "random_seed", seed(1), is_error)
+    call random_seed(size=n)
+    call cg_iric_read_integer(cgnsOut, "random_seed", random_seed_number, is_error)
+    allocate (seed_array(n))
+    seed_array = random_seed_number
     call random_seed(put=seed)
+    deallocate (seed_array)
 
   end subroutine read_common_parameter
 
