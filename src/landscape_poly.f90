@@ -55,6 +55,10 @@ module landscape_poly
   !******************************************************************************************
   !> 樹木のアスペクト比
   real(8) :: tree_aspect_ratio
+  !> 樹木の描画アングル(Degree)
+  real(8) :: tree_drawing_angle_deg
+  !> 樹木の描画アングル(Radian)
+  real(8) :: tree_drawing_angle_rad
 
   !> 葉部分のアウトライン頂点数
   integer :: leaf_1_outline_point_count = 4
@@ -266,6 +270,9 @@ contains
   !******************************************************************************************
   subroutine make_tree_polygon_outline()
 
+    !==========================================================================================
+    ! 基準点からのオフセット
+    !==========================================================================================
     !> 樹木の葉部分のベースのアウトラインオフセット
     real(8), dimension(:), allocatable :: tree_leaf_1_outline_base_offset_x
     !> 樹木の葉部分のベースのアウトラインオフセット
@@ -284,14 +291,54 @@ contains
     !> 樹木の幹部分のベースのアウトラインオフセット
     real(8), dimension(:), allocatable :: tree_trunk_outline_base_offset_y
 
-    !> 樹木のベースのアウトラインオフセットの高さ
-    real(8) :: tree_base_height
+    !> 葉のポリゴンのx方向オフセット量(1段目底辺)
+    real(8) :: leaf_1_offset_bottom
+    !> 葉のポリゴンのx方向オフセット量(1段目上辺)
+    real(8) :: leaf_1_offset_top
+    !> 葉のポリゴンのy方向オフセット量(1段目上辺)
+    real(8) :: leaf_1_offset_height
+    !> 葉のポリゴンのx方向オフセット量(2段目底辺)
+    real(8) :: leaf_2_offset_bottom
+    !> 葉のポリゴンのx方向オフセット量(2段目上辺)
+    real(8) :: leaf_2_offset_top
+    !> 葉のポリゴンのy方向オフセット量(1段目上辺)
+    real(8) :: leaf_2_offset_height
+    !> 葉のポリゴンのx方向オフセット量(3段目底辺)
+    real(8) :: leaf_3_offset_bottom
+    !> 葉のポリゴンのx方向オフセット量(3段目上辺)
+    real(8) :: leaf_3_offset_top
+    !> 葉のポリゴンのy方向オフセット量(1段目上辺)
+    real(8) :: leaf_3_offset_height
+
+    !> 幹のポリゴンのx方向オフセット量
+    real(8) :: trunk_offset_x
+    !> 幹のポリゴンのy方向オフセット量
+    real(8) :: trunk_offset_y
+
+    !==========================================================================================
+    ! 計算で使用する一時変数
+    !==========================================================================================
+    !> 樹木全体の高さを単位長さにするためのパラメータ
+    real(8) :: inverse_tree_base_height
+
+    !> cos(tree_drawing_angle_rad)の計算
+    real(8) :: cos_tree
+    !> sin(tree_drawing_angle_rad)の計算
+    real(8) :: sin_tree
+
+    !> オブジェクトの描画位置の座標
+    real(8), dimension(:, :), allocatable :: draw_point_coordinate_x_2d
+    !> オブジェクトの描画位置の座標
+    real(8), dimension(:, :), allocatable :: draw_point_coordinate_y_2d
 
     !> 樹木のインデックス
     integer :: tree_index
     !> ループ用変数
     integer :: i
 
+    !==========================================================================================
+    ! メモリ確保
+    !==========================================================================================
     ! 樹木のアウトラインオフセットのメモリ確保
     allocate (tree_leaf_1_outline_base_offset_x(leaf_1_outline_point_count))
     allocate (tree_leaf_2_outline_base_offset_x(leaf_2_outline_point_count))
@@ -313,41 +360,93 @@ contains
     allocate (tree_trunk_outline_y(tree%max_object_count, trunk_outline_point_count))
 
     !==========================================================================================
-    ! ベースのアウトラインオフセットの計算
+    ! ベースのアウトラインオフセットの計算のためのパラメータをセット
     !==========================================================================================
-    !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    ! 樹木葉部分のアウトラインオフセット
-    !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    ! 1段目の葉のアウトラインオフセット
-    tree_leaf_1_outline_base_offset_x(1) = -1.0000d0; tree_leaf_1_outline_base_offset_y(1) = 1.0d0
-    tree_leaf_1_outline_base_offset_x(2) = -0.4333d0; tree_leaf_1_outline_base_offset_y(2) = 2.0d0
-    tree_leaf_1_outline_base_offset_x(3) = 0.4333d0; tree_leaf_1_outline_base_offset_y(3) = 2.0d0
-    tree_leaf_1_outline_base_offset_x(4) = 1.0000d0; tree_leaf_1_outline_base_offset_y(4) = 1.0d0
+    ! 葉のポリゴンのx方向オフセット量をセット
+    leaf_1_offset_bottom = 1.0000d0*tree_aspect_ratio
+    leaf_1_offset_top = 0.4333d0*tree_aspect_ratio
+    leaf_2_offset_bottom = 0.7666d0*tree_aspect_ratio
+    leaf_2_offset_top = 0.1665d0*tree_aspect_ratio
+    leaf_3_offset_bottom = 0.3333d0*tree_aspect_ratio
+    leaf_3_offset_top = 0.0000d0*tree_aspect_ratio
+    ! 葉のポリゴンのy方向オフセット量をセット
+    leaf_1_offset_height = 2.0000d0
+    leaf_2_offset_height = 3.0000d0
+    leaf_3_offset_height = 4.0000d0
 
-    ! 2段目の葉のアウトラインオフセット
-    tree_leaf_2_outline_base_offset_x(1) = -0.7666d0; tree_leaf_2_outline_base_offset_y(1) = 2.0d0
-    tree_leaf_2_outline_base_offset_x(2) = -0.1665d0; tree_leaf_2_outline_base_offset_y(2) = 3.0d0
-    tree_leaf_2_outline_base_offset_x(3) = 0.1665d0; tree_leaf_2_outline_base_offset_y(3) = 3.0d0
-    tree_leaf_2_outline_base_offset_x(4) = 0.7666d0; tree_leaf_2_outline_base_offset_y(4) = 2.0d0
+    ! 幹のポリゴンのx方向オフセット量をセット
+    trunk_offset_x = 0.2000d0*tree_aspect_ratio
+    ! 幹のポリゴンのy方向オフセット量をセット
+    trunk_offset_y = 1.0000d0
 
-    ! 3段目の葉のアウトラインオフセット
-    tree_leaf_3_outline_base_offset_x(1) = -0.3333d0; tree_leaf_3_outline_base_offset_y(1) = 3.0d0
-    tree_leaf_3_outline_base_offset_x(2) = 0.0000d0; tree_leaf_3_outline_base_offset_y(2) = 4.0d0
-    tree_leaf_3_outline_base_offset_x(3) = 0.3333d0; tree_leaf_3_outline_base_offset_y(3) = 3.0d0
+    ! 基準点(y=0)からアウトラインのy最大値までの高さを設定
+    inverse_tree_base_height = 1.0d0/max(trunk_offset_y, leaf_1_offset_height, leaf_2_offset_height, leaf_3_offset_height)
 
+    ! 三角関数の計算
+    cos_tree = cos(tree_drawing_angle_rad)
+    sin_tree = sin(tree_drawing_angle_rad)
+
+    !==========================================================================================
+    ! ベースのアウトラインオフセットの計算
+    ! オフセット量に既にアスペクト比が含まれているので、アスペクト比を掛ける必要はない
+    ! x' = x*cos(theta) + y*sin(theta), y' = -x*sin(theta) + y*cos(theta)で描画角度を考慮した座標を計算しておく
+    !==========================================================================================
     !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     ! 樹木幹部分のアウトラインオフセット
     !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     !幅が0.4、高さが1.0の矩形を作成
-    tree_trunk_outline_base_offset_x(1) = -0.2d0; tree_trunk_outline_base_offset_y(1) = 0.0d0
-    tree_trunk_outline_base_offset_x(2) = -0.2d0; tree_trunk_outline_base_offset_y(2) = 1.0d0
-    tree_trunk_outline_base_offset_x(3) = 0.2d0; tree_trunk_outline_base_offset_y(3) = 1.0d0
-    tree_trunk_outline_base_offset_x(4) = 0.2d0; tree_trunk_outline_base_offset_y(4) = 0.0d0
+    tree_trunk_outline_base_offset_x(1) = -trunk_offset_x*cos_tree + 0.0d0*sin_tree
+    tree_trunk_outline_base_offset_y(1) = trunk_offset_x*sin_tree + 0.0d0*cos_tree
+    tree_trunk_outline_base_offset_x(2) = -trunk_offset_x*cos_tree + trunk_offset_y*sin_tree
+    tree_trunk_outline_base_offset_y(2) = trunk_offset_x*sin_tree + trunk_offset_y*cos_tree
+    tree_trunk_outline_base_offset_x(3) = trunk_offset_x*cos_tree + trunk_offset_y*sin_tree
+    tree_trunk_outline_base_offset_y(3) = -trunk_offset_x*sin_tree + trunk_offset_y*cos_tree
+    tree_trunk_outline_base_offset_x(4) = trunk_offset_x*cos_tree + 0.0d0*sin_tree
+    tree_trunk_outline_base_offset_y(4) = -trunk_offset_x*sin_tree + 0.0d0*cos_tree
 
     !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    ! 基準点(y=0)からアウトラインのy最大値までの高さを設定
+    ! 樹木葉部分のアウトラインオフセット
     !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    tree_base_height = 4.0d0
+    ! 1段目の葉のアウトラインオフセット*tree_aspect_ratio
+    tree_leaf_1_outline_base_offset_x(1) = -leaf_1_offset_bottom*cos_tree + trunk_offset_y*sin_tree
+    tree_leaf_1_outline_base_offset_y(1) = leaf_1_offset_bottom*sin_tree + trunk_offset_y*cos_tree
+    tree_leaf_1_outline_base_offset_x(2) = -leaf_1_offset_top*cos_tree + leaf_1_offset_height*sin_tree
+    tree_leaf_1_outline_base_offset_y(2) = leaf_1_offset_top*sin_tree + leaf_1_offset_height*cos_tree
+    tree_leaf_1_outline_base_offset_x(3) = leaf_1_offset_top*cos_tree + leaf_1_offset_height*sin_tree
+    tree_leaf_1_outline_base_offset_y(3) = -leaf_1_offset_top*sin_tree + leaf_1_offset_height*cos_tree
+    tree_leaf_1_outline_base_offset_x(4) = leaf_1_offset_bottom*cos_tree + trunk_offset_y*sin_tree
+    tree_leaf_1_outline_base_offset_y(4) = -leaf_1_offset_bottom*sin_tree + trunk_offset_y*cos_tree
+
+    ! 2段目の葉のアウトラインオフセット
+    tree_leaf_2_outline_base_offset_x(1) = -leaf_2_offset_bottom*cos_tree + leaf_1_offset_height*sin_tree
+    tree_leaf_2_outline_base_offset_y(1) = leaf_2_offset_bottom*sin_tree + leaf_1_offset_height*cos_tree
+    tree_leaf_2_outline_base_offset_x(2) = -leaf_2_offset_top*cos_tree + leaf_2_offset_height*sin_tree
+    tree_leaf_2_outline_base_offset_y(2) = leaf_2_offset_top*sin_tree + leaf_2_offset_height*cos_tree
+    tree_leaf_2_outline_base_offset_x(3) = leaf_2_offset_top*cos_tree + leaf_2_offset_height*sin_tree
+    tree_leaf_2_outline_base_offset_y(3) = -leaf_2_offset_top*sin_tree + leaf_2_offset_height*cos_tree
+    tree_leaf_2_outline_base_offset_x(4) = leaf_2_offset_bottom*cos_tree + leaf_1_offset_height*sin_tree
+    tree_leaf_2_outline_base_offset_y(4) = -leaf_2_offset_bottom*sin_tree + leaf_1_offset_height*cos_tree
+
+    ! 3段目の葉のアウトラインオフセット
+    tree_leaf_3_outline_base_offset_x(1) = -leaf_3_offset_bottom*cos_tree + leaf_2_offset_height*sin_tree
+    tree_leaf_3_outline_base_offset_y(1) = leaf_3_offset_bottom*sin_tree + leaf_2_offset_height*cos_tree
+    tree_leaf_3_outline_base_offset_x(2) = leaf_3_offset_top*cos_tree + leaf_3_offset_height*sin_tree
+    tree_leaf_3_outline_base_offset_y(2) = -leaf_3_offset_top*sin_tree + leaf_3_offset_height*cos_tree
+    tree_leaf_3_outline_base_offset_x(3) = leaf_3_offset_bottom*cos_tree + leaf_2_offset_height*sin_tree
+    tree_leaf_3_outline_base_offset_y(3) = -leaf_3_offset_bottom*sin_tree + leaf_2_offset_height*cos_tree
+
+    !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ! 樹木のベースの形の高さが単位長さになるようにオフセット量を計算
+    ! 割り算は計算コストが高いので、最終的な座標に変換する前に計算しておく
+    !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    tree_leaf_1_outline_base_offset_x = tree_leaf_1_outline_base_offset_x*inverse_tree_base_height
+    tree_leaf_1_outline_base_offset_y = tree_leaf_1_outline_base_offset_y*inverse_tree_base_height
+    tree_leaf_2_outline_base_offset_x = tree_leaf_2_outline_base_offset_x*inverse_tree_base_height
+    tree_leaf_2_outline_base_offset_y = tree_leaf_2_outline_base_offset_y*inverse_tree_base_height
+    tree_leaf_3_outline_base_offset_x = tree_leaf_3_outline_base_offset_x*inverse_tree_base_height
+    tree_leaf_3_outline_base_offset_y = tree_leaf_3_outline_base_offset_y*inverse_tree_base_height
+    tree_trunk_outline_base_offset_x = tree_trunk_outline_base_offset_x*inverse_tree_base_height
+    tree_trunk_outline_base_offset_y = tree_trunk_outline_base_offset_y*inverse_tree_base_height
 
     !==========================================================================================
     ! 樹木のアウトラインの最終座標を計算
@@ -360,35 +459,35 @@ contains
     ! 葉のアウトラインの最終座標を計算(1段目)
     tree_leaf_1_outline_x(:, :) = spread(tree%draw_point_coordinate_x(:), 2, leaf_1_outline_point_count) + &
                                   spread(tree_leaf_1_outline_base_offset_x(:), 1, tree%max_object_count)* &
-                                  spread(tree%object_size(:), 2, leaf_1_outline_point_count)/tree_base_height*tree_aspect_ratio
+                                  spread(tree%object_size(:), 2, leaf_1_outline_point_count)
 
     tree_leaf_1_outline_y(:, :) = spread(tree%draw_point_coordinate_y(:), 2, leaf_1_outline_point_count) + &
                                   spread(tree_leaf_1_outline_base_offset_y(:), 1, tree%max_object_count)* &
-                                  spread(tree%object_size(:), 2, leaf_1_outline_point_count)/tree_base_height
+                                  spread(tree%object_size(:), 2, leaf_1_outline_point_count)
     ! 葉のアウトラインの最終座標を計算(2段目)
     tree_leaf_2_outline_x(:, :) = spread(tree%draw_point_coordinate_x(:), 2, leaf_2_outline_point_count) + &
                                   spread(tree_leaf_2_outline_base_offset_x(:), 1, tree%max_object_count)* &
-                                  spread(tree%object_size(:), 2, leaf_2_outline_point_count)/tree_base_height*tree_aspect_ratio
+                                  spread(tree%object_size(:), 2, leaf_2_outline_point_count)
 
     tree_leaf_2_outline_y(:, :) = spread(tree%draw_point_coordinate_y(:), 2, leaf_2_outline_point_count) + &
                                   spread(tree_leaf_2_outline_base_offset_y(:), 1, tree%max_object_count)* &
-                                  spread(tree%object_size(:), 2, leaf_2_outline_point_count)/tree_base_height
+                                  spread(tree%object_size(:), 2, leaf_2_outline_point_count)
     ! 葉のアウトラインの最終座標を計算(3段目)
     tree_leaf_3_outline_x(:, :) = spread(tree%draw_point_coordinate_x(:), 2, leaf_3_outline_point_count) + &
                                   spread(tree_leaf_3_outline_base_offset_x(:), 1, tree%max_object_count)* &
-                                  spread(tree%object_size(:), 2, leaf_3_outline_point_count)/tree_base_height*tree_aspect_ratio
+                                  spread(tree%object_size(:), 2, leaf_3_outline_point_count)
 
     tree_leaf_3_outline_y(:, :) = spread(tree%draw_point_coordinate_y(:), 2, leaf_3_outline_point_count) + &
                                   spread(tree_leaf_3_outline_base_offset_y(:), 1, tree%max_object_count)* &
-                                  spread(tree%object_size(:), 2, leaf_3_outline_point_count)/tree_base_height
+                                  spread(tree%object_size(:), 2, leaf_3_outline_point_count)
 
     ! 幹のアウトラインの最終座標を計算
     tree_trunk_outline_x(:, :) = spread(tree%draw_point_coordinate_x(:), 2, trunk_outline_point_count) + &
                                  spread(tree_trunk_outline_base_offset_x(:), 1, tree%max_object_count)* &
-                                 spread(tree%object_size(:), 2, trunk_outline_point_count)/tree_base_height*tree_aspect_ratio
+                                 spread(tree%object_size(:), 2, trunk_outline_point_count)
     tree_trunk_outline_y(:, :) = spread(tree%draw_point_coordinate_y(:), 2, trunk_outline_point_count) + &
                                  spread(tree_trunk_outline_base_offset_y(:), 1, tree%max_object_count)* &
-                                 spread(tree%object_size(:), 2, trunk_outline_point_count)/tree_base_height
+                                 spread(tree%object_size(:), 2, trunk_outline_point_count)
 
     ! メモリ解放
     deallocate (tree_leaf_1_outline_base_offset_x, tree_leaf_1_outline_base_offset_y)
@@ -474,6 +573,10 @@ contains
       call initialize_object_type_parameters("tree", tree)
       ! 樹木のアスペクト比は樹木だけのパラメータなのでここで個別に読み込む
       call cg_iric_read_real(cgnsOut, "tree_aspect_ratio", tree_aspect_ratio, is_error)
+      call cg_iric_read_real(cgnsOut, "tree_drawing_angle", tree_drawing_angle_deg, is_error)
+
+      ! アングルをラジアンに変換
+      tree_drawing_angle_rad = tree_drawing_angle_deg*pi/180.0d0
 
       !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
       ! 樹木の描画位置、サイズの計算

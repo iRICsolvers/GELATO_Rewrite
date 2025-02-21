@@ -1132,6 +1132,13 @@
 				</Definition>
 			</Item>
 
+			<!-- 樹木の描画アングル(Degree)(Y軸方向が0)(時計回りが正) -->
+			<Item name="tree_drawing_angle" caption="Tree Drawing Angle(Degree)">
+				<Definition valueType="real" default="0" tooltips="Y-axis direction is 0 degree, clockwise is positive">
+					<Condition type="isEqual" target="is_draw_tree" value="1"/>
+				</Definition>
+			</Item>
+
 			<!-- 範囲内に何個樹木を描画するか -->
 			<Item name="number_of_tree_in_range" caption="Number of Tree in the Range">
 				<Definition valueType="integer" default="1" min="1">
