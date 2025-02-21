@@ -622,15 +622,24 @@ contains
     !> ループ用変数
     integer :: object_index
 
+    !> 出力名の昇順で表示されるので、頭に数字をつけておくための変数
+    integer :: output_index_str
+    ! 2桁のゼロ埋め文字列用
+    character(len=2) :: output_index_str_char
+
+    output_index_str = 0
+
     !==========================================================================================
     ! 樹木オブジェクトの出力
     !==========================================================================================
     if (is_draw_tree == 1) then
 
+      output_index_str = output_index_str + 1
+      write (output_index_str_char, '(I2.2)') output_index_str  ! 文字列変換
       !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
       ! 樹木の葉部分の描画
       !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-      call cg_iric_write_sol_polydata_groupbegin(cgnsOut, "tree_leaf", is_error)
+      call cg_iric_write_sol_polydata_groupbegin(cgnsOut, trim(output_index_str_char)//"_Tree leaf", is_error)
       do object_index = 1, tree%max_object_count
 
         if (tree%drawing_target == 1) then
@@ -657,10 +666,12 @@ contains
       end do
       call cg_iric_write_sol_polydata_groupend(cgnsOut, is_error)
 
+      output_index_str = output_index_str + 1
+      write (output_index_str_char, '(I2.2)') output_index_str  ! 文字列変換
       !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
       ! 樹木の幹部分の描画
       !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-      call cg_iric_write_sol_polydata_groupbegin(cgnsOut, "tree_trunk", is_error)
+      call cg_iric_write_sol_polydata_groupbegin(cgnsOut, trim(output_index_str_char)//"_Tree trunk", is_error)
       do object_index = 1, tree%max_object_count
 
         if (tree%drawing_target == 1) then
@@ -685,7 +696,9 @@ contains
     ! 礫の描画
     !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     if (is_draw_gravel == 1) then
-      call cg_iric_write_sol_polydata_groupbegin(cgnsOut, "gravel", is_error)
+      output_index_str = output_index_str + 1
+      write (output_index_str_char, '(I2.2)') output_index_str  ! 文字列変換
+      call cg_iric_write_sol_polydata_groupbegin(cgnsOut, trim(output_index_str_char)//"_Gravel", is_error)
       do object_index = 1, gravel%max_object_count
 
         if (gravel%drawing_target == 1) then
