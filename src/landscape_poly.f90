@@ -24,6 +24,8 @@ module landscape_poly
     !> @param 0: 与えない
     !> @param 1: 与える
     integer :: is_apply_variation_size
+    !> 範囲内に何個のオブジェクトを配置するか
+    integer :: number_of_object_in_range
     !> オブジェクトの描画間隔
     integer :: draw_interval_i
     !> オブジェクトの描画間隔
@@ -105,6 +107,7 @@ contains
     if (object%drawing_target == 1) call cg_iric_read_real(cgnsOut, "drawable_depth_"//trim(suffix), object%drawable_depth, is_error)
     call cg_iric_read_real(cgnsOut, "base_size_"//trim(suffix), object%base_size, is_error)
     call cg_iric_read_integer(cgnsOut, "is_apply_variation_size_"//trim(suffix), object%is_apply_variation_size, is_error)
+    call cg_iric_read_integer(cgnsOut, "number_of_"//trim(suffix)//"_in_range", object%number_of_object_in_range, is_error)
     call cg_iric_read_integer(cgnsOut, "draw_interval_i_"//trim(suffix), object%draw_interval_i, is_error)
     call cg_iric_read_integer(cgnsOut, "draw_interval_j_"//trim(suffix), object%draw_interval_j, is_error)
 
@@ -120,7 +123,7 @@ contains
     type(object_poly), intent(inout) :: object
 
     !> ループ用変数
-    integer :: i, j
+    integer :: i, j, m
 
     !> 仮のオブジェクトの最大数
     integer :: max_object_count
@@ -147,7 +150,7 @@ contains
 
     ! 仮のオブジェクト最大数を計算
     max_object_count = ceiling(real(cell_count_i, 8)/real(object%draw_interval_i, 8), kind=8)* &
-                       ceiling(real(cell_count_j, 8)/real(object%draw_interval_j, 8), kind=8)
+                       ceiling(real(cell_count_j, 8)/real(object%draw_interval_j, 8), kind=8)*object%number_of_object_in_range
     ! 仮のオブジェクト配置先のセルのインデックスのメモリ確保
     allocate (draw_point_index_i(max_object_count), draw_point_index_j(max_object_count))
 
@@ -162,42 +165,43 @@ contains
     do j = 1, cell_count_j, object%draw_interval_j
       do i = 1, cell_count_i, object%draw_interval_i
 
-        !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-        ! オブジェクトを配置するセルのインデックスを決定
-        ! オブジェクトは配置間隔内でランダムな位置に配置されるように処理する
-        !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-        ! rand_numは[0, 1)の範囲なので、[0, draw_interval_i_object)の範囲に変換
-        call random_number(rand_num)
-        offset_i = int(rand_num*object%draw_interval_i)  ! 0 〜 draw_interval_i_object-1 の範囲
-        call random_number(rand_num)
-        offset_j = int(rand_num*object%draw_interval_j)  ! 0 〜 draw_interval_j_object-1 の範囲
+        do m = 1, object%number_of_object_in_range
+          !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+          ! オブジェクトを配置するセルのインデックスを決定
+          ! オブジェクトは配置間隔内でランダムな位置に配置されるように処理する
+          !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+          ! rand_numは[0, 1)の範囲なので、[0, draw_interval_i_object)の範囲に変換
+          call random_number(rand_num)
+          offset_i = int(rand_num*object%draw_interval_i)  ! 0 〜 draw_interval_i_object-1 の範囲
+          call random_number(rand_num)
+          offset_j = int(rand_num*object%draw_interval_j)  ! 0 〜 draw_interval_j_object-1 の範囲
 
-        !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        ! 境界処理を適用して安全な座標を確保
-        !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        ! i + offset_i が cell_count_i を超えないようにする
-        draw_point_index_i_tmp = min(i + offset_i, cell_count_i)
-        ! j + offset_j が cell_count_j を超えないようにする
-        draw_point_index_j_tmp = min(j + offset_j, cell_count_j)
+          !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+          ! 境界処理を適用して安全な座標を確保
+          !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+          ! i + offset_i が cell_count_i を超えないようにする
+          draw_point_index_i_tmp = min(i + offset_i, cell_count_i)
+          ! j + offset_j が cell_count_j を超えないようにする
+          draw_point_index_j_tmp = min(j + offset_j, cell_count_j)
 
-        !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-        ! 指定したセルにオブジェクトを配置する場合、配置先のインデックスが指定セルかチェック、指定セル以外であればスキップ
-        ! 水深で描画判定をする場合は全ての配置位置で描画の可能性があるのでここでは間引かずタイムステップ毎に描画判定を行う
-        !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+          !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+          ! 指定したセルにオブジェクトを配置する場合、配置先のインデックスが指定セルかチェック、指定セル以外であればスキップ
+          ! 水深で描画判定をする場合は全ての配置位置で描画の可能性があるのでここでは間引かずタイムステップ毎に描画判定を行う
+          !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-        if (object%drawing_target == 2) then
-          if (is_tree_cell(draw_point_index_i_tmp, draw_point_index_j_tmp) == 0) then
-            cycle
+          if (object%drawing_target == 2) then
+            if (is_tree_cell(draw_point_index_i_tmp, draw_point_index_j_tmp) == 0) then
+              cycle
+            end if
           end if
-        end if
 
-        !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-        ! object_indexを更新して仮配列に配置先のセルのインデックスを格納
-        !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-        object_index = object_index + 1
-        draw_point_index_i(object_index) = draw_point_index_i_tmp
-        draw_point_index_j(object_index) = draw_point_index_j_tmp
-
+          !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+          ! object_indexを更新して仮配列に配置先のセルのインデックスを格納
+          !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+          object_index = object_index + 1
+          draw_point_index_i(object_index) = draw_point_index_i_tmp
+          draw_point_index_j(object_index) = draw_point_index_j_tmp
+        end do
       end do
     end do
 

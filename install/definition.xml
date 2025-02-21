@@ -1132,6 +1132,13 @@
 				</Definition>
 			</Item>
 
+			<!-- 範囲内に何個樹木を描画するか -->
+			<Item name="number_of_tree_in_range" caption="Number of Tree in the Range">
+				<Definition valueType="integer" default="1" min="1">
+					<Condition type="isEqual" target="is_draw_tree" value="1"/>
+				</Definition>
+			</Item>
+
 			<!-- 樹木描画間隔(i方向) -->
 			<Item name="draw_interval_i_tree" caption="Tree Plot Step in i-direction">
 				<Definition valueType="integer" default="1">
@@ -1188,6 +1195,13 @@
 			<!-- 礫の粒径にバリエーションを与えるか -->
 			<Item name="is_apply_variation_size_gravel" caption="Gravel Diameter Variation">
 				<Definition valueType="integer" default="0" checkBox="true">
+					<Condition type="isEqual" target="is_draw_gravel" value="1"/>
+				</Definition>
+			</Item>
+
+			<!-- 範囲内に何個礫を描画するか -->
+			<Item name="number_of_gravel_in_range" caption="Number of Gravel in the Range">
+				<Definition valueType="integer" default="1" min="1">
 					<Condition type="isEqual" target="is_draw_gravel" value="1"/>
 				</Definition>
 			</Item>
