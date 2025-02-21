@@ -297,8 +297,8 @@ contains
     real(8), intent(in), dimension(:, :) :: scalar
     integer, intent(in) :: cell_index_i
     integer, intent(in) :: cell_index_j
-    real(8) :: tracer_coordinate_xi_in_cell
-    real(8) :: tracer_coordinate_eta_in_cell
+    real(8), intent(in) :: tracer_coordinate_xi_in_cell
+    real(8), intent(in) :: tracer_coordinate_eta_in_cell
     real(8) :: point
     !> ξ方向で上側の2つの値(i,j+1),(i+1,j+1)の補間結果
     real(8) :: interpolated_xi_top
@@ -312,6 +312,7 @@ contains
 
   end function calculate_scalar_at_tracer_position
 
+  ! ToDo: このサブルーチンはgridモジュールに移動するべき
   !******************************************************************************************
   !> @brief トレーサーの物理座標を計算
   !> @param[in] cell_index_i トレーサーのあるセルのi方向インデックス

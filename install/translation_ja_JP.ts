@@ -517,11 +517,11 @@
             <translation>Bの値</translation>
         </message>
         <message>
-            <source>Vegetation Drawing Condition</source>
+            <source>tree Drawing Condition</source>
             <translation>植生描画の条件</translation>
         </message>
         <message>
-            <source>Vegetation Drawing</source>
+            <source>tree Drawing</source>
             <translation>植生描画</translation>
         </message>
         <message>
@@ -533,7 +533,7 @@
             <translation>セルの条件をCGNファイルから読む</translation>
         </message>
         <message>
-            <source>Critical Depth Below which Vegetation Draw(m)</source>
+            <source>Critical Depth Below which tree Draw(m)</source>
             <translation>この水深以下は植生を描画(m)</translation>
         </message>
         <message>
@@ -541,7 +541,7 @@
             <translation>平均樹木高</translation>
         </message>
         <message>
-            <source>Vegetation Height Variation</source>
+            <source>tree Height Variation</source>
             <translation>樹木高さ変動</translation>
         </message>
         <message>
@@ -621,7 +621,7 @@
             <translation>砂利河床セル</translation>
         </message>
         <message>
-            <source>Vegetation Cell</source>
+            <source>tree Cell</source>
             <translation>植生繁茂セル</translation>
         </message>
         <!-- 計算結果 -->
