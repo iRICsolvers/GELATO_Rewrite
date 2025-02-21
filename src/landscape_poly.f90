@@ -55,13 +55,21 @@ module landscape_poly
   real(8) :: tree_aspect_ratio
 
   !> 葉部分のアウトライン頂点数
-  integer :: leaf_outline_point_count = 11
+  integer :: leaf_1_outline_point_count = 4
+  !> 葉部分のアウトライン頂点数
+  integer :: leaf_2_outline_point_count = 4
+  !> 葉部分のアウトライン頂点数
+  integer :: leaf_3_outline_point_count = 3
   !> 幹部分のアウトライン頂点数
   integer :: trunk_outline_point_count = 4
 
   !> 樹木の葉のアウトラインの最終座標(樹木の数, 葉の頂点数)の2次元配列
-  real(8), dimension(:, :), allocatable :: tree_leaf_outline_x
-  real(8), dimension(:, :), allocatable :: tree_leaf_outline_y
+  real(8), dimension(:, :), allocatable :: tree_leaf_1_outline_x
+  real(8), dimension(:, :), allocatable :: tree_leaf_2_outline_x
+  real(8), dimension(:, :), allocatable :: tree_leaf_3_outline_x
+  real(8), dimension(:, :), allocatable :: tree_leaf_1_outline_y
+  real(8), dimension(:, :), allocatable :: tree_leaf_2_outline_y
+  real(8), dimension(:, :), allocatable :: tree_leaf_3_outline_y
   !> 樹木の幹のアウトラインの最終座標(樹木の数, 幹の頂点数)の2次元配列
   real(8), dimension(:, :), allocatable :: tree_trunk_outline_x
   real(8), dimension(:, :), allocatable :: tree_trunk_outline_y
@@ -255,9 +263,18 @@ contains
   subroutine make_tree_polygon_outline()
 
     !> 樹木の葉部分のベースのアウトラインオフセット
-    real(8), dimension(:), allocatable :: tree_leaf_outline_base_offset_x
+    real(8), dimension(:), allocatable :: tree_leaf_1_outline_base_offset_x
     !> 樹木の葉部分のベースのアウトラインオフセット
-    real(8), dimension(:), allocatable :: tree_leaf_outline_base_offset_y
+    real(8), dimension(:), allocatable :: tree_leaf_2_outline_base_offset_x
+    !> 樹木の葉部分のベースのアウトラインオフセット
+    real(8), dimension(:), allocatable :: tree_leaf_3_outline_base_offset_x
+    !> 樹木の葉部分のベースのアウトラインオフセット
+    real(8), dimension(:), allocatable :: tree_leaf_1_outline_base_offset_y
+    !> 樹木の葉部分のベースのアウトラインオフセット
+    real(8), dimension(:), allocatable :: tree_leaf_2_outline_base_offset_y
+    !> 樹木の葉部分のベースのアウトラインオフセット
+    real(8), dimension(:), allocatable :: tree_leaf_3_outline_base_offset_y
+
     !> 樹木の幹部分のベースのアウトラインオフセット
     real(8), dimension(:), allocatable :: tree_trunk_outline_base_offset_x
     !> 樹木の幹部分のベースのアウトラインオフセット
@@ -272,14 +289,22 @@ contains
     integer :: i
 
     ! 樹木のアウトラインオフセットのメモリ確保
-    allocate (tree_leaf_outline_base_offset_x(leaf_outline_point_count))
-    allocate (tree_leaf_outline_base_offset_y(leaf_outline_point_count))
+    allocate (tree_leaf_1_outline_base_offset_x(leaf_1_outline_point_count))
+    allocate (tree_leaf_2_outline_base_offset_x(leaf_2_outline_point_count))
+    allocate (tree_leaf_3_outline_base_offset_x(leaf_3_outline_point_count))
+    allocate (tree_leaf_1_outline_base_offset_y(leaf_1_outline_point_count))
+    allocate (tree_leaf_2_outline_base_offset_y(leaf_2_outline_point_count))
+    allocate (tree_leaf_3_outline_base_offset_y(leaf_3_outline_point_count))
     allocate (tree_trunk_outline_base_offset_x(trunk_outline_point_count))
     allocate (tree_trunk_outline_base_offset_y(trunk_outline_point_count))
 
     ! 樹木のアウトラインの最終座標のメモリ確保
-    allocate (tree_leaf_outline_x(tree%max_object_count, leaf_outline_point_count))
-    allocate (tree_leaf_outline_y(tree%max_object_count, leaf_outline_point_count))
+    allocate (tree_leaf_1_outline_x(tree%max_object_count, leaf_1_outline_point_count))
+    allocate (tree_leaf_2_outline_x(tree%max_object_count, leaf_2_outline_point_count))
+    allocate (tree_leaf_3_outline_x(tree%max_object_count, leaf_3_outline_point_count))
+    allocate (tree_leaf_1_outline_y(tree%max_object_count, leaf_1_outline_point_count))
+    allocate (tree_leaf_2_outline_y(tree%max_object_count, leaf_2_outline_point_count))
+    allocate (tree_leaf_3_outline_y(tree%max_object_count, leaf_3_outline_point_count))
     allocate (tree_trunk_outline_x(tree%max_object_count, trunk_outline_point_count))
     allocate (tree_trunk_outline_y(tree%max_object_count, trunk_outline_point_count))
 
@@ -289,17 +314,22 @@ contains
     !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     ! 樹木葉部分のアウトラインオフセット
     !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    tree_leaf_outline_base_offset_x(1) = -1.0000d0; tree_leaf_outline_base_offset_y(1) = 1.0d0
-    tree_leaf_outline_base_offset_x(2) = -0.4333d0; tree_leaf_outline_base_offset_y(2) = 2.0d0
-    tree_leaf_outline_base_offset_x(3) = -0.7666d0; tree_leaf_outline_base_offset_y(3) = 2.0d0
-    tree_leaf_outline_base_offset_x(4) = -0.1665d0; tree_leaf_outline_base_offset_y(4) = 3.0d0
-    tree_leaf_outline_base_offset_x(5) = -0.3333d0; tree_leaf_outline_base_offset_y(5) = 3.0d0
-    tree_leaf_outline_base_offset_x(6) = 0.0000d0; tree_leaf_outline_base_offset_y(6) = 4.0d0
-    tree_leaf_outline_base_offset_x(7) = 0.3333d0; tree_leaf_outline_base_offset_y(7) = 3.0d0
-    tree_leaf_outline_base_offset_x(8) = 0.1665d0; tree_leaf_outline_base_offset_y(8) = 3.0d0
-    tree_leaf_outline_base_offset_x(9) = 0.7666d0; tree_leaf_outline_base_offset_y(9) = 2.0d0
-    tree_leaf_outline_base_offset_x(10) = 0.4333d0; tree_leaf_outline_base_offset_y(10) = 2.0d0
-    tree_leaf_outline_base_offset_x(11) = 1.0000d0; tree_leaf_outline_base_offset_y(11) = 1.0d0
+    ! 1段目の葉のアウトラインオフセット
+    tree_leaf_1_outline_base_offset_x(1) = -1.0000d0; tree_leaf_1_outline_base_offset_y(1) = 1.0d0
+    tree_leaf_1_outline_base_offset_x(2) = -0.4333d0; tree_leaf_1_outline_base_offset_y(2) = 2.0d0
+    tree_leaf_1_outline_base_offset_x(3) = 0.4333d0; tree_leaf_1_outline_base_offset_y(3) = 2.0d0
+    tree_leaf_1_outline_base_offset_x(4) = 1.0000d0; tree_leaf_1_outline_base_offset_y(4) = 1.0d0
+
+    ! 2段目の葉のアウトラインオフセット
+    tree_leaf_2_outline_base_offset_x(1) = -0.7666d0; tree_leaf_2_outline_base_offset_y(1) = 2.0d0
+    tree_leaf_2_outline_base_offset_x(2) = -0.1665d0; tree_leaf_2_outline_base_offset_y(2) = 3.0d0
+    tree_leaf_2_outline_base_offset_x(3) = 0.1665d0; tree_leaf_2_outline_base_offset_y(3) = 3.0d0
+    tree_leaf_2_outline_base_offset_x(4) = 0.7666d0; tree_leaf_2_outline_base_offset_y(4) = 2.0d0
+
+    ! 3段目の葉のアウトラインオフセット
+    tree_leaf_3_outline_base_offset_x(1) = -0.3333d0; tree_leaf_3_outline_base_offset_y(1) = 3.0d0
+    tree_leaf_3_outline_base_offset_x(2) = 0.0000d0; tree_leaf_3_outline_base_offset_y(2) = 4.0d0
+    tree_leaf_3_outline_base_offset_x(3) = 0.3333d0; tree_leaf_3_outline_base_offset_y(3) = 3.0d0
 
     !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     ! 樹木幹部分のアウトラインオフセット
@@ -311,13 +341,9 @@ contains
     tree_trunk_outline_base_offset_x(4) = 0.2d0; tree_trunk_outline_base_offset_y(4) = 0.0d0
 
     !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    ! 基準点(y=0)からアウトラインのy最大値までの高さを計算
+    ! 基準点(y=0)からアウトラインのy最大値までの高さを設定
     !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    tree_base_height = 0
-
-    do i = 1, leaf_outline_point_count
-      tree_base_height = max(tree_base_height, tree_leaf_outline_base_offset_y(i))
-    end do
+    tree_base_height = 4.0d0
 
     !==========================================================================================
     ! 樹木のアウトラインの最終座標を計算
@@ -327,14 +353,30 @@ contains
     ! object_sizeは(樹木の数)の1次元配列を2次元配列に拡張
     !==========================================================================================
 
-    ! 葉のアウトラインの最終座標を計算
-    tree_leaf_outline_x(:, :) = spread(tree%draw_point_coordinate_x(:), 2, leaf_outline_point_count) + &
-                                spread(tree_leaf_outline_base_offset_x(:), 1, tree%max_object_count)* &
-                                spread(tree%object_size(:), 2, leaf_outline_point_count)/tree_base_height*tree_aspect_ratio
+    ! 葉のアウトラインの最終座標を計算(1段目)
+    tree_leaf_1_outline_x(:, :) = spread(tree%draw_point_coordinate_x(:), 2, leaf_1_outline_point_count) + &
+                                  spread(tree_leaf_1_outline_base_offset_x(:), 1, tree%max_object_count)* &
+                                  spread(tree%object_size(:), 2, leaf_1_outline_point_count)/tree_base_height*tree_aspect_ratio
 
-    tree_leaf_outline_y(:, :) = spread(tree%draw_point_coordinate_y(:), 2, leaf_outline_point_count) + &
-                                spread(tree_leaf_outline_base_offset_y(:), 1, tree%max_object_count)* &
-                                spread(tree%object_size(:), 2, leaf_outline_point_count)/tree_base_height
+    tree_leaf_1_outline_y(:, :) = spread(tree%draw_point_coordinate_y(:), 2, leaf_1_outline_point_count) + &
+                                  spread(tree_leaf_1_outline_base_offset_y(:), 1, tree%max_object_count)* &
+                                  spread(tree%object_size(:), 2, leaf_1_outline_point_count)/tree_base_height
+    ! 葉のアウトラインの最終座標を計算(2段目)
+    tree_leaf_2_outline_x(:, :) = spread(tree%draw_point_coordinate_x(:), 2, leaf_2_outline_point_count) + &
+                                  spread(tree_leaf_2_outline_base_offset_x(:), 1, tree%max_object_count)* &
+                                  spread(tree%object_size(:), 2, leaf_2_outline_point_count)/tree_base_height*tree_aspect_ratio
+
+    tree_leaf_2_outline_y(:, :) = spread(tree%draw_point_coordinate_y(:), 2, leaf_2_outline_point_count) + &
+                                  spread(tree_leaf_2_outline_base_offset_y(:), 1, tree%max_object_count)* &
+                                  spread(tree%object_size(:), 2, leaf_2_outline_point_count)/tree_base_height
+    ! 葉のアウトラインの最終座標を計算(3段目)
+    tree_leaf_3_outline_x(:, :) = spread(tree%draw_point_coordinate_x(:), 2, leaf_3_outline_point_count) + &
+                                  spread(tree_leaf_3_outline_base_offset_x(:), 1, tree%max_object_count)* &
+                                  spread(tree%object_size(:), 2, leaf_3_outline_point_count)/tree_base_height*tree_aspect_ratio
+
+    tree_leaf_3_outline_y(:, :) = spread(tree%draw_point_coordinate_y(:), 2, leaf_3_outline_point_count) + &
+                                  spread(tree_leaf_3_outline_base_offset_y(:), 1, tree%max_object_count)* &
+                                  spread(tree%object_size(:), 2, leaf_3_outline_point_count)/tree_base_height
 
     ! 幹のアウトラインの最終座標を計算
     tree_trunk_outline_x(:, :) = spread(tree%draw_point_coordinate_x(:), 2, trunk_outline_point_count) + &
@@ -345,7 +387,9 @@ contains
                                  spread(tree%object_size(:), 2, trunk_outline_point_count)/tree_base_height
 
     ! メモリ解放
-    deallocate (tree_leaf_outline_base_offset_x, tree_leaf_outline_base_offset_y)
+    deallocate (tree_leaf_1_outline_base_offset_x, tree_leaf_1_outline_base_offset_y)
+    deallocate (tree_leaf_2_outline_base_offset_x, tree_leaf_2_outline_base_offset_y)
+    deallocate (tree_leaf_3_outline_base_offset_x, tree_leaf_3_outline_base_offset_y)
     deallocate (tree_trunk_outline_base_offset_x, tree_trunk_outline_base_offset_y)
     deallocate (tree%draw_point_coordinate_x, tree%draw_point_coordinate_y) ! もう使わないので解放
     deallocate (tree%object_size) ! もう使わないので解放
@@ -483,18 +527,25 @@ contains
       do object_index = 1, tree%max_object_count
 
         if (tree%drawing_target == 1) then
-          ! 指定した水深以下のセルにオブジェクトを描画
-          if (depth_cell(tree%draw_point_index_i(object_index), tree%draw_point_index_j(object_index)) <= tree%drawable_depth) then
-            call cg_iric_write_sol_polydata_polygon(cgnsOut, leaf_outline_point_count, &
-                                                    tree_leaf_outline_x(object_index, :), &
-                                                    tree_leaf_outline_y(object_index, :), is_error)
+          ! 指定した水深より大きいセルではスキップ
+          if (depth_cell(tree%draw_point_index_i(object_index), tree%draw_point_index_j(object_index)) > tree%drawable_depth) then
+            cycle
           end if
-        else
-          ! 指定したセルにオブジェクトを描画
-          call cg_iric_write_sol_polydata_polygon(cgnsOut, leaf_outline_point_count, &
-                                                  tree_leaf_outline_x(object_index, :), &
-                                                  tree_leaf_outline_y(object_index, :), is_error)
         end if
+
+        ! 指定したセルにオブジェクトを描画
+        ! 1段目の葉の描画
+        call cg_iric_write_sol_polydata_polygon(cgnsOut, leaf_1_outline_point_count, &
+                                                tree_leaf_1_outline_x(object_index, :), &
+                                                tree_leaf_1_outline_y(object_index, :), is_error)
+        ! 2段目の葉の描画
+        call cg_iric_write_sol_polydata_polygon(cgnsOut, leaf_2_outline_point_count, &
+                                                tree_leaf_2_outline_x(object_index, :), &
+                                                tree_leaf_2_outline_y(object_index, :), is_error)
+        ! 3段目の葉の描画
+        call cg_iric_write_sol_polydata_polygon(cgnsOut, leaf_3_outline_point_count, &
+                                                tree_leaf_3_outline_x(object_index, :), &
+                                                tree_leaf_3_outline_y(object_index, :), is_error)
 
       end do
       call cg_iric_write_sol_polydata_groupend(cgnsOut, is_error)
