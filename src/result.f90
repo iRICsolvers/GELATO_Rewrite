@@ -63,9 +63,9 @@ module result
   real(8), dimension(:), allocatable :: discharge
   !> 河床変動量を格納する配列
   real(8), dimension(:, :), allocatable :: elevation_change_node
-  !> 河床変動量を格納する配列
+  !> 渦度を格納する配列
   real(8), dimension(:, :), allocatable :: vorticity_node
-  !> 河床変動量を格納する配列
+  !> 染料濃度を格納する配列
   real(8), dimension(:, :), allocatable :: dye_concentration_node
 
   !==========================================================================================

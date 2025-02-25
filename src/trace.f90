@@ -38,9 +38,9 @@ module trace
     ! GUIから読み込む値
     !------------------------------------------------------------------------------------------
     !> 移動限界水深
-    real(8):: Movable_Critical_depth
+    real(8):: movable_critical_depth
     !> 移動限界摩擦速度
-    real(8):: Movable_Critical_u_star
+    real(8):: movable_critical_u_star
     !> トレーサー補足壁の高さ
     real(8):: trap_wall_height
     !> トレーサー捕捉率
@@ -433,11 +433,11 @@ contains
   !> @param[inout] is_tracer_movable トレーサーが動くか
   ! メモ：障害物に関するチェックは移動と追加で扱いが異なるのでこの中では行わない
   !******************************************************************************************
-  subroutine check_tracer(Movable_Critical_depth, Movable_Critical_u_star, tracer_coordinate_xi, tracer_coordinate_eta, cell_index_i, cell_index_j, tracer_coordinate_xi_in_cell, tracer_coordinate_eta_in_cell, is_add_tracer, is_tracer_movable)
+  subroutine check_tracer(movable_critical_depth, movable_critical_u_star, tracer_coordinate_xi, tracer_coordinate_eta, cell_index_i, cell_index_j, tracer_coordinate_xi_in_cell, tracer_coordinate_eta_in_cell, is_add_tracer, is_tracer_movable)
     !> 移動限界水深
-    real(8) :: Movable_Critical_depth
+    real(8) :: movable_critical_depth
     !> 移動限界摩擦速度
-    real(8) :: Movable_Critical_u_star
+    real(8) :: movable_critical_u_star
     !> ξ方向トレーサー座標
     real(8), intent(in) :: tracer_coordinate_xi
     !> η方向トレーサー座標
@@ -473,7 +473,7 @@ contains
                                                               tracer_coordinate_eta_in_cell)
 
     ! 投入箇所の水深が移動可能水深以上かつ停止したトレーサーを除去するかチェック
-    if (Movable_Critical_depth > tracer_point_depth) then
+    if (movable_critical_depth > tracer_point_depth) then
 
       is_tracer_movable = 0
 
@@ -484,7 +484,7 @@ contains
     end if
 
     ! 投入箇所の摩擦速度が移動可能水深以上かつ停止したトレーサーを除去するかチェック
-    if (Movable_Critical_u_star > tracer_point_u_star) then
+    if (movable_critical_u_star > tracer_point_u_star) then
 
       is_tracer_movable = 0
 
@@ -540,8 +540,8 @@ contains
 
     call cg_iric_read_integer(cgnsOut, "max_number_"//trim(suffix), tracer%max_number, is_error)
     call cg_iric_read_integer(cgnsOut, "max_number_in_cell_"//trim(suffix), tracer%max_number_in_cell, is_error)
-    call cg_iric_read_real(cgnsOut, "Movable_Critical_depth_"//trim(suffix), tracer%Movable_Critical_depth, is_error)
-    call cg_iric_read_real(cgnsOut, "Movable_Critical_u_star_"//trim(suffix), tracer%Movable_Critical_u_star, is_error)
+    call cg_iric_read_real(cgnsOut, "movable_critical_depth_"//trim(suffix), tracer%movable_critical_depth, is_error)
+    call cg_iric_read_real(cgnsOut, "movable_critical_u_star_"//trim(suffix), tracer%movable_critical_u_star, is_error)
     call cg_iric_read_real(cgnsOut, "trap_wall_height_"//trim(suffix), tracer%trap_wall_height, is_error)
     call cg_iric_read_real(cgnsOut, "trap_rate_"//trim(suffix), tracer%trap_rate, is_error)
     call cg_iric_read_real(cgnsOut, "supply_position_xi_first_"//trim(suffix), tracer%supply_position_xi_first, is_error)
@@ -685,8 +685,8 @@ contains
         if (tracer%tracer_number_in_cell(supply_position_i, supply_position_j) >= tracer%max_number_in_cell) cycle
 
         ! 投入箇所の水深と摩擦速度を調べる
-        call check_tracer(tracer%Movable_Critical_depth, &
-                          tracer%Movable_Critical_u_star, &
+        call check_tracer(tracer%movable_critical_depth, &
+                          tracer%movable_critical_u_star, &
                           supply_position_xi, &
                           supply_position_eta, &
                           supply_position_i, &
@@ -816,8 +816,8 @@ contains
 
       ! 水深と摩擦速度によるチェック
       ! TODO: この関数はもう一度見直す、引数減らせるはず。
-      call check_tracer(tracer%Movable_Critical_depth, &
-                        tracer%Movable_Critical_u_star, &
+      call check_tracer(tracer%movable_critical_depth, &
+                        tracer%movable_critical_u_star, &
                         tracer%tracer_coordinate_xi(tracer_index), &
                         tracer%tracer_coordinate_eta(tracer_index), &
                         tracer%cell_index_i(tracer_index), &
@@ -1013,8 +1013,8 @@ contains
           moved_position_eta_in_cell)
 
         ! 移動後の場所の条件でチェック
-        call check_tracer(tracer%Movable_Critical_depth, &
-                          tracer%Movable_Critical_u_star, &
+        call check_tracer(tracer%movable_critical_depth, &
+                          tracer%movable_critical_u_star, &
                           moved_position_xi, &
                           moved_position_eta, &
                           moved_position_i, &
@@ -1264,8 +1264,8 @@ contains
         supply_position_eta_in_cell = grid_interval_eta/2
 
         ! トレーサー位置の水深、摩擦速度、などのチェック
-        call check_tracer(tracer%Movable_Critical_depth, &
-                          tracer%Movable_Critical_u_star, &
+        call check_tracer(tracer%movable_critical_depth, &
+                          tracer%movable_critical_u_star, &
                           supply_position_xi, &
                           supply_position_eta, &
                           supply_position_i, &
@@ -1369,7 +1369,7 @@ contains
 
     write (*, '(a40,i10)') "total "//trim(suffix)//" tracer number : ", tracer%total_tracer_number
 
-    call cg_iric_write_sol_baseiterative_integer(cgnsout, "Tracer Number("//trim(suffix)//")", tracer%total_tracer_number, is_error)
+    call cg_iric_write_sol_baseiterative_integer(cgnsout, "Tracer Number ("//trim(suffix)//")", tracer%total_tracer_number, is_error)
 
     !==========================================================================================
     ! トレーサーの出力
@@ -1394,13 +1394,13 @@ contains
       ! トレーサーの属性をエクスポート
       call cg_iric_write_sol_particlegroup_pos2d(cgnsOut, tracer_coordinate_x(tracer_index), tracer_coordinate_y(tracer_index), is_error)
       call cg_iric_write_sol_particlegroup_integer(cgnsOut, 'Generation('//trim(suffix)//")", tracer%tracer_generation(tracer_index), is_error)
-      call cg_iric_write_sol_particlegroup_real(cgnsOut, 'Tracer Wight('//trim(suffix)//")", tracer%tracer_weight(tracer_index), is_error)
+      call cg_iric_write_sol_particlegroup_real(cgnsOut, 'Tracer Weight('//trim(suffix)//")", tracer%tracer_weight(tracer_index), is_error)
 
       ! デバッグ用出力
-      call cg_iric_write_sol_particlegroup_real(cgnsOut, 'coordinate_x('//trim(suffix)//")", tracer_coordinate_x(tracer_index), is_error)
-      call cg_iric_write_sol_particlegroup_real(cgnsOut, 'coordinate_y('//trim(suffix)//")", tracer_coordinate_y(tracer_index), is_error)
-      call cg_iric_write_sol_particlegroup_integer(cgnsOut, 'cell_index_i('//trim(suffix)//")", tracer%cell_index_i(tracer_index), is_error)
-      call cg_iric_write_sol_particlegroup_integer(cgnsOut, 'cell_index_j('//trim(suffix)//")", tracer%cell_index_j(tracer_index), is_error)
+      ! call cg_iric_write_sol_particlegroup_real(cgnsOut, 'coordinate_x('//trim(suffix)//")", tracer_coordinate_x(tracer_index), is_error)
+      ! call cg_iric_write_sol_particlegroup_real(cgnsOut, 'coordinate_y('//trim(suffix)//")", tracer_coordinate_y(tracer_index), is_error)
+      call cg_iric_write_sol_particlegroup_integer(cgnsOut, 'Cell Index i ('//trim(suffix)//")", tracer%cell_index_i(tracer_index), is_error)
+      call cg_iric_write_sol_particlegroup_integer(cgnsOut, 'Cell Index j ('//trim(suffix)//")", tracer%cell_index_j(tracer_index), is_error)
 
     end do
 
@@ -1413,12 +1413,12 @@ contains
     !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     ! セルの属性について
     !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    call cg_iric_write_sol_cell_real(cgnsOut, "Numbers of tracers ("//trim(suffix)//")", real(tracer%tracer_number_in_cell, kind=8), is_error)
-    call cg_iric_write_sol_cell_real(cgnsOut, "Weighted numbers of tracers ("//trim(suffix)//")", tracer%Weighted_number_in_cell, is_error)
-    call cg_iric_write_sol_cell_real(cgnsOut, "Tracer numbers in each section("//trim(suffix)//")", real(tracer%total_tracer_number_in_cross_section, kind=8), is_error)
-    call cg_iric_write_sol_cell_real(cgnsOut, "Cross-sectional averaged tracer numbers("//trim(suffix)//")", tracer%averaged_tracer_number_in_cross_section, is_error)
-    call cg_iric_write_sol_cell_real(cgnsOut, "Time-integrated Particle Counts in Cells ("//trim(suffix)//")", tracer%time_integrated_tracer_number_in_cell, is_error)
-    call cg_iric_write_sol_cell_real(cgnsOut, "Averaged Particle Counts ("//trim(suffix)//")", tracer%time_averaged_tracer_number_in_cell, is_error)
+    call cg_iric_write_sol_cell_real(cgnsOut, "Numbers of Tracers ("//trim(suffix)//")", real(tracer%tracer_number_in_cell, kind=8), is_error)
+    call cg_iric_write_sol_cell_real(cgnsOut, "Weighted Numbers of Tracers ("//trim(suffix)//")", tracer%Weighted_number_in_cell, is_error)
+    call cg_iric_write_sol_cell_real(cgnsOut, "Tracer Numbers in Each Section("//trim(suffix)//")", real(tracer%total_tracer_number_in_cross_section, kind=8), is_error)
+    call cg_iric_write_sol_cell_real(cgnsOut, "Cross-Sectional Averaged Tracer Numbers("//trim(suffix)//")", tracer%averaged_tracer_number_in_cross_section, is_error)
+    call cg_iric_write_sol_cell_real(cgnsOut, "Time-Integrated Tracer Counts in Cells ("//trim(suffix)//")", tracer%time_integrated_tracer_number_in_cell, is_error)
+    call cg_iric_write_sol_cell_real(cgnsOut, "Averaged Tracer Counts ("//trim(suffix)//")", tracer%time_averaged_tracer_number_in_cell, is_error)
 
   end subroutine write_sol_normal_tracer
 
@@ -1439,8 +1439,8 @@ contains
     call cg_iric_read_integer(cgnsOut, "max_number_trajectory", trajectory%max_number, is_error)
     call cg_iric_read_integer(cgnsOut, "max_save_times_trajectory", trajectory%max_save_times, is_error)
     call cg_iric_read_integer(cgnsOut, "save_interval_trajectory", trajectory%save_interval, is_error)
-    call cg_iric_read_real(cgnsOut, "movable_critical_depth_trajectory", trajectory%Movable_Critical_depth, is_error)
-    call cg_iric_read_real(cgnsOut, "movable_critical_u_star_trajectory", trajectory%Movable_Critical_u_star, is_error)
+    call cg_iric_read_real(cgnsOut, "movable_critical_depth_trajectory", trajectory%movable_critical_depth, is_error)
+    call cg_iric_read_real(cgnsOut, "movable_critical_u_star_trajectory", trajectory%movable_critical_u_star, is_error)
     call cg_iric_read_real(cgnsOut, "trap_wall_height_trajectory", trajectory%trap_wall_height, is_error)
     call cg_iric_read_real(cgnsOut, "trap_rate_trajectory", trajectory%trap_rate, is_error)
     call cg_iric_read_real(cgnsOut, "supply_time_trajectory", trajectory%supply_time, is_error)
@@ -1577,8 +1577,8 @@ contains
         if (obstacle_cell(supply_position_i, supply_position_j) == 1) cycle
 
         ! 投入箇所の水深と摩擦速度を調べる
-        call check_tracer(tracer%Movable_Critical_depth, &
-                          tracer%Movable_Critical_u_star, &
+        call check_tracer(tracer%movable_critical_depth, &
+                          tracer%movable_critical_u_star, &
                           supply_position_xi, &
                           supply_position_eta, &
                           supply_position_i, &
@@ -1707,8 +1707,8 @@ contains
       tracer%is_tracer_movable(tracer_index) = 1
 
       ! 水深と摩擦速度によるチェック
-      call check_tracer(tracer%Movable_Critical_depth, &
-                        tracer%Movable_Critical_u_star, &
+      call check_tracer(tracer%movable_critical_depth, &
+                        tracer%movable_critical_u_star, &
                         tracer%tracer_coordinate_xi(tracer_index), &
                         tracer%tracer_coordinate_eta(tracer_index), &
                         tracer%cell_index_i(tracer_index), &
@@ -1900,8 +1900,8 @@ contains
           moved_position_eta_in_cell)
 
         ! 移動後の場所の条件でチェック
-        call check_tracer(tracer%Movable_Critical_depth, &
-                          tracer%Movable_Critical_u_star, &
+        call check_tracer(tracer%movable_critical_depth, &
+                          tracer%movable_critical_u_star, &
                           moved_position_xi, &
                           moved_position_eta, &
                           moved_position_i, &
@@ -1992,9 +1992,9 @@ contains
     !> 何個目のトレーサーかのインデックス
     integer :: tracer_index
 
-    write (*, '(a40, i10)') "total Special tracer number : ", count(trace%is_tracer_arrived == 1)
+    write (*, '(a40, i10)') "total Trajectory tracer number : ", count(trace%is_tracer_arrived == 1)
     ! is_tracer_arrivedが1のトレーサーの数を出力
-    call cg_iric_write_sol_baseiterative_integer(cgnsOut, 'TotalSpecialTracerNumber', count(trace%is_tracer_arrived == 1), is_error)
+    call cg_iric_write_sol_baseiterative_integer(cgnsOut, 'Total Trajectory Number', count(trace%is_tracer_arrived == 1), is_error)
 
     ! トレーサーが存在しない場合はスキップ
     if (trace%total_tracer_number == 0) return
