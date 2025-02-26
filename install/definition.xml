@@ -604,14 +604,14 @@
 
 			<!-- 軌跡の最大保存回数 -->
 			<Item name="max_save_times_trajectory" caption="Maximum Times of Tracer Trajectory Saving">
-				<Definition valueType="integer" default="10000" max="100000">
+				<Definition valueType="integer" default="10000" max="1000000">
 					<Condition type="isEqual" target="is_trace_trajectory" value="1"/>
 				</Definition>
 			</Item>
 
 			<!-- 軌跡の保存間隔 -->
 			<Item name="save_interval_trajectory" caption="Interval of Tracer Trajectory Saving">
-				<Definition valueType="integer" default="10" min="1" max="1000">
+				<Definition valueType="integer" default="10" min="1" max="10000">
 					<Condition type="isEqual" target="is_trace_trajectory" value="1"/>
 				</Definition>
 			</Item>
@@ -913,7 +913,7 @@
 
 					<!-- 始点 -->
 					<Item name="supply_position_xi_first_fish" caption="xi_1">
-						<Definition valueType="real" default="0.1" min="0.0" max="1.0">
+						<Definition valueType="real" default="0.9" min="0.0" max="1.0">
 							<Condition type="and">
 								<Condition type="isEqual" target="is_simulation_fish" value="1"/>
 								<Condition type="isEqual" target="fish_arrangement_method" value="1"/>
@@ -923,7 +923,7 @@
 
 					<!-- 終点 -->
 					<Item name="supply_position_xi_end_fish" caption="xi_2">
-						<Definition valueType="real" default="0.1" min="0.0" max="1.0">
+						<Definition valueType="real" default="0.9" min="0.0" max="1.0">
 							<Condition type="and">
 								<Condition type="isEqual" target="is_simulation_fish" value="1"/>
 								<Condition type="isEqual" target="fish_arrangement_method" value="1"/>
