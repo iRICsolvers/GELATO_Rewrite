@@ -325,7 +325,7 @@ program gelate
       end if
 
       ! 出力タイムステップを増加
-      call increment_integer_value(time_step_out, 1)
+      time_step_out = time_step_out + 1
 
       ! 計算結果出力開始を宣言
       call cg_iric_write_sol_start(cgnsOut, is_error)
@@ -351,7 +351,7 @@ program gelate
           time_since_start = time_trace - time_out_initial
 
           ! トレーサー追加のカウンター更新
-          call increment_real_value(time_counter_add_normal_tracer, time_interval_for_tracking)
+          time_counter_add_normal_tracer = time_counter_add_normal_tracer + time_interval_for_tracking
 
           !------------------------------------------------------------------------------------------
           ! トレーサーの追跡
