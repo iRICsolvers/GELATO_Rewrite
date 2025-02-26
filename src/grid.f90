@@ -44,7 +44,7 @@ module grid
   !> マニング粗度(格子点)
   real(8), dimension(:, :), allocatable :: roughness_node
   !> 植生発生セル
-  integer, dimension(:, :), allocatable :: is_vegetation_cell
+  integer, dimension(:, :), allocatable :: is_tree_cell
   !> 礫発生セル
   integer, dimension(:, :), allocatable :: is_gravel_cell
   !> トレーサートラップセル
@@ -119,7 +119,7 @@ contains
     allocate (is_cloning_cell(cell_count_i, cell_count_j))
     allocate (roughness_cell(cell_count_i, cell_count_j))
     allocate (roughness_node(node_count_i, node_count_j))
-    allocate (is_vegetation_cell(cell_count_i, cell_count_j))
+    allocate (is_tree_cell(cell_count_i, cell_count_j))
     allocate (is_gravel_cell(cell_count_i, cell_count_j))
     allocate (trap_cell(cell_count_i, cell_count_j))
 
@@ -131,7 +131,7 @@ contains
     call cg_iric_read_grid_integer_cell(cgnsOut, "obstacle", obstacle_cell, is_error)
     call cg_iric_read_grid_integer_cell(cgnsOut, "is_tracer_cloning", is_cloning_cell, is_error)
     call cg_iric_read_grid_real_cell(cgnsOut, "roughness_cell", roughness_cell, is_error)
-    call cg_iric_read_grid_integer_cell(cgnsOut, "is_vegetation_cell", is_vegetation_cell, is_error)
+    call cg_iric_read_grid_integer_cell(cgnsOut, "is_tree_cell", is_tree_cell, is_error)
     call cg_iric_read_grid_integer_cell(cgnsOut, "is_gravel_cell", is_gravel_cell, is_error)
     call cg_iric_read_grid_integer_cell(cgnsOut, "trap_cell", trap_cell, is_error)
 

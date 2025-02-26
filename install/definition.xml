@@ -3,9 +3,9 @@
 	xmlns="www.iric.net/SolverDefinition/1.0" 
 	name="RE_GELATO" 
 	caption="Re:GELATO" 
-	version="0.0.24021902" 
+	version="0.0.24022001" 
 	copyright="Keita Hoshino" 
-	release="2025.02.19" 
+	release="2025.02.20" 
 	homepage="https://i-ric.org/yasu/" 
 	executable="ReGELATO.exe" 
 	iterationtype="time" 
@@ -1082,17 +1082,17 @@
 		</Tab>
 
 		<!-- 植生描画設定 -->
-		<Tab name="Vegetation" caption="Vegetation Drawing Condition">
+		<Tab name="tree" caption="tree Drawing Condition">
 
 			<!-- 描画するかどうか -->
-			<Item name="is_draw_vegetation" caption="Vegetation Drawing">
+			<Item name="is_draw_tree" caption="tree Drawing">
 				<Definition valueType="integer" default="0" checkBox="true"/>
 			</Item>
 
 			<!-- 描画するセル -->
-			<Item name="drawing_target_vegetation" caption="Vegetation Drawing Condition">
+			<Item name="drawing_target_tree" caption="tree Drawing Condition">
 				<Definition valueType="integer" default="1">
-					<Condition type="isEqual" target="is_draw_vegetation" value="1"/>
+					<Condition type="isEqual" target="is_draw_tree" value="1"/>
 					<Enumerations>
 						<Enumeration value="1" caption="Dry Cell Only"/>
 						<Enumeration value="2" caption="Read From Cell"/>
@@ -1101,48 +1101,62 @@
 			</Item>
 
 			<!-- 植生を描画できる水深 -->
-			<Item name="vegetation_drawable_depth" caption="Critical Depth Below which Vegetation Draw(m)">
+			<Item name="drawable_depth_tree" caption="Critical Depth Below which tree Draw(m)">
 				<Definition valueType="real" default="0.001">
 					<Condition type="and">
-						<Condition type="isEqual" target="is_draw_vegetation" value="1"/>
-						<Condition type="isEqual" target="drawing_target_vegetation" value="1"/>
+						<Condition type="isEqual" target="is_draw_tree" value="1"/>
+						<Condition type="isEqual" target="drawing_target_tree" value="1"/>
 					</Condition>
 
 				</Definition>
 			</Item>
 
 			<!-- 植生の平均高さ -->
-			<Item name="vegetation_base_height" caption="Average Tree Height(m)">
+			<Item name="base_size_tree" caption="Average Tree Height(m)">
 				<Definition valueType="real" default="1.0">
-					<Condition type="isEqual" target="is_draw_vegetation" value="1"/>
+					<Condition type="isEqual" target="is_draw_tree" value="1"/>
 				</Definition>
 			</Item>
 
 			<!-- 樹木の高さにバリエーションを与えるか -->
-			<Item name="apply_variation_vegetation_height" caption="Vegetation Height Variation">
+			<Item name="is_apply_variation_size_tree" caption="tree Height Variation">
 				<Definition valueType="integer" default="0" checkBox="true">
-					<Condition type="isEqual" target="is_draw_vegetation" value="1"/>
+					<Condition type="isEqual" target="is_draw_tree" value="1"/>
 				</Definition>
 			</Item>
 
 			<!-- 樹木のアスペクト比 -->
-			<Item name="tree_aspect" caption="Aspect Ratio of Tree Image">
+			<Item name="tree_aspect_ratio" caption="Aspect Ratio of Tree Image">
 				<Definition valueType="real" default="0.5">
-					<Condition type="isEqual" target="is_draw_vegetation" value="1"/>
+					<Condition type="isEqual" target="is_draw_tree" value="1"/>
+				</Definition>
+			</Item>
+
+			<!-- 樹木の描画アングル(Degree)(Y軸方向が0)(時計回りが正) -->
+			<Item name="tree_drawing_angle" caption="Tree Drawing Angle(Degree)">
+				<Definition valueType="real" default="0" tooltips="Y-axis direction is 0 degree, clockwise is positive">
+					<Condition type="isEqual" target="is_draw_tree" value="1"/>
+				</Definition>
+			</Item>
+
+			<!-- 範囲内に何個樹木を描画するか -->
+			<Item name="number_of_tree_in_range" caption="Number of Tree in the Range">
+				<Definition valueType="integer" default="1" min="1">
+					<Condition type="isEqual" target="is_draw_tree" value="1"/>
 				</Definition>
 			</Item>
 
 			<!-- 樹木描画間隔(i方向) -->
-			<Item name="draw_interval_i_vegetation" caption="Tree Plot Step in i-direction">
+			<Item name="draw_interval_i_tree" caption="Tree Plot Step in i-direction">
 				<Definition valueType="integer" default="1">
-					<Condition type="isEqual" target="is_draw_vegetation" value="1"/>
+					<Condition type="isEqual" target="is_draw_tree" value="1"/>
 				</Definition>
 			</Item>
 
 			<!-- 樹木描画間隔(j方向) -->
-			<Item name="draw_interval_j_vegetation" caption="Tree Plot Step in j-direction">
+			<Item name="draw_interval_j_tree" caption="Tree Plot Step in j-direction">
 				<Definition valueType="integer" default="1">
-					<Condition type="isEqual" target="is_draw_vegetation" value="1"/>
+					<Condition type="isEqual" target="is_draw_tree" value="1"/>
 				</Definition>
 			</Item>
 
@@ -1168,7 +1182,7 @@
 			</Item>
 
 			<!-- 礫を描画できる水深 -->
-			<Item name="gravel_drawable_depth" caption="Critical Depth Below which gravel Draw(m)">
+			<Item name="drawable_depth_gravel" caption="Critical Depth Below which gravel Draw(m)">
 				<Definition valueType="real" default="0.001">
 					<Condition type="and">
 						<Condition type="isEqual" target="is_draw_gravel" value="1"/>
@@ -1179,15 +1193,22 @@
 			</Item>
 
 			<!-- 礫の粒径 -->
-			<Item name="gravel_base_height" caption="Average Gravel Diameter(m)">
+			<Item name="base_size_gravel" caption="Average Gravel Diameter(m)">
 				<Definition valueType="real" default="1.0">
 					<Condition type="isEqual" target="is_draw_gravel" value="1"/>
 				</Definition>
 			</Item>
 
 			<!-- 礫の粒径にバリエーションを与えるか -->
-			<Item name="apply_variation_gravel_height" caption="Gravel Diameter Variation">
+			<Item name="is_apply_variation_size_gravel" caption="Gravel Diameter Variation">
 				<Definition valueType="integer" default="0" checkBox="true">
+					<Condition type="isEqual" target="is_draw_gravel" value="1"/>
+				</Definition>
+			</Item>
+
+			<!-- 範囲内に何個礫を描画するか -->
+			<Item name="number_of_gravel_in_range" caption="Number of Gravel in the Range">
+				<Definition valueType="integer" default="1" min="1">
 					<Condition type="isEqual" target="is_draw_gravel" value="1"/>
 				</Definition>
 			</Item>
@@ -1275,11 +1296,11 @@
 		</Item>
 
 		<!-- 樹木の描画設定 -->
-		<Item name="is_vegetation_cell" caption="Vegetation Cell">
+		<Item name="is_tree_cell" caption="Tree Cell">
 			<Definition position="cell" valueType="integer" default="0">
 				<Enumerations>
 					<Enumeration value="0" caption="Normal cell"/>
-					<Enumeration value="1" caption="Vegetation Cell"/>
+					<Enumeration value="1" caption="tree Cell"/>
 				</Enumerations>
 			</Definition>
 		</Item>

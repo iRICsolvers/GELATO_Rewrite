@@ -54,7 +54,7 @@ module common
   !> 魚のシミュレーションの有無
   integer :: is_simulation_fish
   !> 樹木の描写の有無
-  integer :: is_draw_vegetation
+  integer :: is_draw_tree
   !> 礫の描画の有無
   integer :: is_draw_gravel
 
@@ -88,12 +88,6 @@ module common
   real(8), parameter :: pi = 3.141592
   !> 小数誤差の許容範囲
   real(8), parameter :: tolerance = 1.0d-14
-
-  !******************************************************************************************
-  ! 乱数のシード値
-  !******************************************************************************************
-  !> 乱数のシード値
-  integer :: seed(1)
 
 contains
 
@@ -152,6 +146,16 @@ contains
   !******************************************************************************************
   subroutine read_common_parameter()
 
+    !******************************************************************************************
+    ! 乱数のシード値
+    !******************************************************************************************
+    !> 乱数のシード値
+    integer :: random_seed_number
+    !> 乱数のシード値
+    integer, dimension(:), allocatable :: seed_array
+    !> コンパイラによって異なるランダムシードの配列の長さ
+    integer :: n
+
     time_step_count_in = 0
 
     ! 読み込む計算結果のタイムステップ数
@@ -183,7 +187,7 @@ contains
     ! 魚のシミュレーションを行うか
     call cg_iric_read_integer(cgnsOut, "is_simulation_fish", is_simulation_fish, is_error)
     ! 樹木の描画を行うか
-    call cg_iric_read_integer(cgnsOut, "is_draw_vegetation", is_draw_vegetation, is_error)
+    call cg_iric_read_integer(cgnsOut, "is_draw_tree", is_draw_tree, is_error)
     ! 礫の描画を行うか
     call cg_iric_read_integer(cgnsOut, "is_draw_gravel", is_draw_gravel, is_error)
 
@@ -207,8 +211,12 @@ contains
     end if
 
     ! 乱数のシード値
-    call cg_iric_read_integer(cgnsOut, "random_seed", seed(1), is_error)
-    call random_seed(put=seed)
+    call random_seed(size=n)
+    call cg_iric_read_integer(cgnsOut, "random_seed", random_seed_number, is_error)
+    allocate (seed_array(n))
+    seed_array = random_seed_number
+    call random_seed(put=seed_array)
+    deallocate (seed_array)
 
   end subroutine read_common_parameter
 
