@@ -261,8 +261,8 @@ contains
     real(8), intent(inout), optional :: tracer_coordinate_xi_in_cell
     real(8), intent(inout), optional :: tracer_coordinate_eta_in_cell
 
-    tracer_cell_index_i = int(tracer_coordinate_xi/grid_interval_xi) + 1
-    tracer_cell_index_j = int(tracer_coordinate_eta/grid_interval_eta) + 1
+    tracer_cell_index_i = int(tracer_coordinate_xi*inverse_grid_interval_xi) + 1
+    tracer_cell_index_j = int(tracer_coordinate_eta*inverse_grid_interval_eta) + 1
 
     ! 例外処理
     ! grid_interval_xi, grid_interval_etaを求める際に誤差により1付近のトレーサーのインデックスが範囲外になることがある
@@ -306,9 +306,9 @@ contains
     real(8) :: interpolated_xi_bottom
 
     ! トレーサー位置のスカラーを計算
-    interpolated_xi_bottom = scalar(tracer_cell_index_i, tracer_cell_index_j) + (scalar(tracer_cell_index_i + 1, tracer_cell_index_j) - scalar(tracer_cell_index_i, tracer_cell_index_j))*tracer_coordinate_xi_in_cell/grid_interval_xi
-    interpolated_xi_top = scalar(tracer_cell_index_i, tracer_cell_index_j + 1) + (scalar(tracer_cell_index_i + 1, tracer_cell_index_j + 1) - scalar(tracer_cell_index_i, tracer_cell_index_j + 1))*tracer_coordinate_xi_in_cell/grid_interval_xi
-    point = interpolated_xi_bottom + (interpolated_xi_top - interpolated_xi_bottom)*tracer_coordinate_eta_in_cell/grid_interval_eta
+    interpolated_xi_bottom = scalar(tracer_cell_index_i, tracer_cell_index_j) + (scalar(tracer_cell_index_i + 1, tracer_cell_index_j) - scalar(tracer_cell_index_i, tracer_cell_index_j))*tracer_coordinate_xi_in_cell*inverse_grid_interval_xi
+    interpolated_xi_top = scalar(tracer_cell_index_i, tracer_cell_index_j + 1) + (scalar(tracer_cell_index_i + 1, tracer_cell_index_j + 1) - scalar(tracer_cell_index_i, tracer_cell_index_j + 1))*tracer_coordinate_xi_in_cell*inverse_grid_interval_xi
+    point = interpolated_xi_bottom + (interpolated_xi_top - interpolated_xi_bottom)*tracer_coordinate_eta_in_cell*inverse_grid_interval_eta
 
   end function calculate_scalar_at_tracer_position
 
@@ -887,11 +887,11 @@ contains
                                         *tracer_coordinate_eta_in_cell &
                                         + scale_factor_xi(tracer_cell_index_i, tracer_cell_index_j) &
                                         *(grid_interval_eta - tracer_coordinate_eta_in_cell)) &
-                                       /grid_interval_eta
+                                       *inverse_grid_interval_eta
         tracer_point_scale_factor_eta = (scale_factor_eta(tracer_cell_index_i + 1, tracer_cell_index_j) &
                                          *tracer_coordinate_xi_in_cell &
                                          + scale_factor_eta(tracer_cell_index_i, tracer_cell_index_j) &
-                                         *(grid_interval_xi - tracer_coordinate_xi_in_cell))/grid_interval_xi
+                                         *(grid_interval_xi - tracer_coordinate_xi_in_cell))*inverse_grid_interval_xi
 
         !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
         ! 移動後の座標を計算
@@ -1793,11 +1793,11 @@ contains
                                         *tracer_coordinate_eta_in_cell &
                                         + scale_factor_xi(tracer_cell_index_i, tracer_cell_index_j) &
                                         *(grid_interval_eta - tracer_coordinate_eta_in_cell)) &
-                                       /grid_interval_eta
+                                       *inverse_grid_interval_eta
         tracer_point_scale_factor_eta = (scale_factor_eta(tracer_cell_index_i + 1, tracer_cell_index_j) &
                                          *tracer_coordinate_xi_in_cell &
                                          + scale_factor_eta(tracer_cell_index_i, tracer_cell_index_j) &
-                                         *(grid_interval_xi - tracer_coordinate_xi_in_cell))/grid_interval_xi
+                                         *(grid_interval_xi - tracer_coordinate_xi_in_cell))*inverse_grid_interval_xi
 
         !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
         ! 移動後の座標を計算
@@ -2268,11 +2268,11 @@ contains
     ! トレーサー地点のスケーリング係数を計算
     tracer_point_scale_factor_xi = (scale_factor_xi(tracer_cell_index_i, tracer_cell_index_j + 1)*tracer_coordinate_eta_in_cell &
                                     + scale_factor_xi(tracer_cell_index_i, tracer_cell_index_j)*(grid_interval_eta - tracer_coordinate_eta_in_cell)) &
-                                   /grid_interval_eta
+                                   *inverse_grid_interval_eta
 
     tracer_point_scale_factor_eta = (scale_factor_eta(tracer_cell_index_i + 1, tracer_cell_index_j)*tracer_coordinate_xi_in_cell &
                                      + scale_factor_eta(tracer_cell_index_i, tracer_cell_index_j)*(grid_interval_xi - tracer_coordinate_xi_in_cell)) &
-                                    /grid_interval_xi
+                                    *inverse_grid_interval_xi
 
     !==========================================================================================
     ! 移動後の座標を計算

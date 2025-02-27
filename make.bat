@@ -6,8 +6,8 @@ rem ----------------------------------------------------------------------
 rem ifort compile with debug options
 rem ----------------------------------------------------------------------
 set FC=ifort
-set FLAGS_RELEASE=/heap-arrays /O2 /QxSSE4.2 /Qipo1 /Qopenmp /nostandard-realloc-lhs /MD /c
-set FLAGS_DEBUG=/Qopenmp /nostandard-realloc-lhs /MD /traceback /check all /heap-arrays /c
+set FLAGS_RELEASE=/Qdiag-disable:10448 /Qinline-forceinline /Qip /heap-arrays /O2 /QxSSE4.2 /Qipo1 /Qopenmp /nostandard-realloc-lhs /MD /c
+set FLAGS_DEBUG=/Qdiag-disable:10448 /Qopenmp /nostandard-realloc-lhs /MD /traceback /check all /heap-arrays /c
 
 %FC% .\src\iric.f90 %FLAGS_RELEASE%
 %FC% .\src\timer_m.f90 %FLAGS_RELEASE%
