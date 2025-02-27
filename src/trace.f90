@@ -1181,8 +1181,13 @@ contains
     add_counter = 0
 
     ! 全格子をチェック
-    do cell_index_j = 1, cell_count_j
-      do cell_index_i = 1, cell_count_i
+    do cell_index_i = 1, cell_count_i
+      do cell_index_j = 1, cell_count_j
+
+        ! フラグのリセット
+        is_add_tracer = 1
+        is_tracer_movable = 1
+
         ! 全体の最大トレーサー数に達してたらサブルーチン終了
         if (tracer%total_tracer_number >= tracer%max_number) return
 
