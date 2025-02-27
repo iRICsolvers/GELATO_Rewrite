@@ -2079,7 +2079,7 @@ contains
                                   fish_position_eta_in_cell + &
                                   scale_factor_xi(fish_position_i, fish_position_j)* &
                                   (grid_interval_eta - fish_position_eta_in_cell)) &
-                                 /grid_interval_eta
+                                 *inverse_grid_interval_eta
 
     ! 魚の地点でのxi方向ジャンプ距離を計算
     jumpable_distance_xi = jumpable_distance(fish_group(fish_index))*fish_point_scale_factor_xi
