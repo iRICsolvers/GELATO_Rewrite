@@ -1181,8 +1181,8 @@ contains
     add_counter = 0
 
     ! 全格子をチェック
-    do cell_index_j = 1, cell_count_j
-      do cell_index_i = 1, cell_count_i
+    do cell_index_i = 1, cell_count_i
+      do cell_index_j = 1, cell_count_j
 
         ! フラグのリセット
         is_add_tracer = 1
