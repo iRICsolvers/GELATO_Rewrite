@@ -1135,14 +1135,14 @@
 
 			<!-- 樹木描画間隔(i方向) -->
 			<Item name="draw_interval_i_tree" caption="Tree Plot Step in i-Direction">
-				<Definition valueType="integer" default="1">
+				<Definition valueType="integer" default="1" min="1">
 					<Condition type="isEqual" target="is_draw_tree" value="1"/>
 				</Definition>
 			</Item>
 
 			<!-- 樹木描画間隔(j方向) -->
 			<Item name="draw_interval_j_tree" caption="Tree Plot Step in j-Direction">
-				<Definition valueType="integer" default="1">
+				<Definition valueType="integer" default="1" min="1">
 					<Condition type="isEqual" target="is_draw_tree" value="1"/>
 				</Definition>
 			</Item>
@@ -1202,14 +1202,14 @@
 
 			<!-- 礫描画間隔(i方向) -->
 			<Item name="draw_interval_i_gravel" caption="Gravel Plot Step in i-Direction">
-				<Definition valueType="integer" default="1">
+				<Definition valueType="integer" default="1" min="1">
 					<Condition type="isEqual" target="is_draw_gravel" value="1"/>
 				</Definition>
 			</Item>
 
 			<!-- 礫描画間隔(j方向) -->
 			<Item name="draw_interval_j_gravel" caption="Gravel Plot Step in j-Direction">
-				<Definition valueType="integer" default="1">
+				<Definition valueType="integer" default="1" min="1">
 					<Condition type="isEqual" target="is_draw_gravel" value="1"/>
 				</Definition>
 			</Item>
