@@ -122,7 +122,7 @@ module fish_module
   !> どのグループに属するか
   integer, dimension(:), allocatable :: fish_group
   !> 魚の生存フラグ
-  integer, dimension(:), allocatable :: is_fish_alived
+  integer, dimension(:), allocatable :: is_fish_alive
   !> 魚の固有タイマー
   real(8), dimension(:), allocatable :: fish_timer
   !> @brief 魚がジャンプしたか、失敗したかのフラグ、一度出力したらリセットされる
@@ -259,7 +259,7 @@ contains
     allocate (fish_angle(fish_count_max))
     allocate (fish_stay_time_in_critical_depth(fish_count_max))
     allocate (fish_group(fish_count_max))
-    allocate (is_fish_alived(fish_count_max))
+    allocate (is_fish_alive(fish_count_max))
     allocate (fish_timer(fish_count_max))
 
     fish_coordinate_xi = 0.0
@@ -267,7 +267,7 @@ contains
     fish_angle = 0.0
     fish_stay_time_in_critical_depth = 0.0
     fish_group = 0
-    is_fish_alived = 1
+    is_fish_alive = 1
     fish_timer = 0.0
 
     ! ジャンプする場合はフラグのメモリを確保
@@ -393,7 +393,7 @@ contains
     ! 魚のアングルは物理座標に置ける角度であるため、魚の位置からξ方向の変位とη方向(=0)の変位を微小な仮値で与え物理座標に直した後、角度に変換する。
     !==========================================================================================
     do fish_index = 1, fish_count
-      if (is_fish_alived(fish_index) == 0) cycle ! 生存フラグが立っていない場合はスキップ
+      if (is_fish_alive(fish_index) == 0) cycle ! 生存フラグが立っていない場合はスキップ
 
       ! 魚の位置のセルインデックス等を取得
       call find_tracer_cell_index(fish_coordinate_xi(fish_index), fish_coordinate_eta(fish_index), &
@@ -554,7 +554,7 @@ contains
         fish_stay_time_in_critical_depth(fish_index) = 0.0
         fish_group(fish_index) = 0
         fish_timer(fish_index) = 0.0
-        is_fish_alived(fish_index) = 0
+        is_fish_alive(fish_index) = 0
       end do
     end if
 
@@ -808,7 +808,7 @@ contains
       if (fish_handling_unable_to_place == 0 .or. fish_handling_unable_to_place == 2) then
         if (is_replacable_by_critical_depth(fish_group(fish_index)) == 0) then
 
-          is_fish_alived(fish_index) = 0
+          is_fish_alive(fish_index) = 0
 
           ! 除去された魚のインデックス、理由を表示
           print '(A, I4, A, I4, A)', 'Fish ', fish_index, ' in group ', fish_group(fish_index), ' is removed. Because there was no place with sufficient depth for relocation.'
@@ -846,7 +846,7 @@ contains
         ! 障害物による除去
         if (obstacle_cell(supply_position_i, supply_position_j) == 1) then
 
-          is_fish_alived(fish_index) = 0
+          is_fish_alive(fish_index) = 0
 
           ! 除去された魚のインデックス、座標、理由を表示
           print '(A, I4, A)', 'Fish ', fish_index, ' is removed because it is placed in the obstacle cell.'
@@ -857,7 +857,7 @@ contains
         ! 最小水深以下による除去
         if (supply_position_depth < movable_critical_depth_fish(fish_group(fish_index))) then
 
-          is_fish_alived(fish_index) = 0
+          is_fish_alive(fish_index) = 0
 
           ! 除去された魚のインデックス、座標、理由を表示
           print '(A, I4, A, I4,A)', 'Fish ', fish_index, 'in group', fish_group(fish_index), ' is removed because it is placed in the critical depth.'
@@ -873,7 +873,7 @@ contains
         ! 障害物による除去
         if (obstacle_cell(supply_position_i, supply_position_j) == 1) then
 
-          is_fish_alived(fish_index) = 0
+          is_fish_alive(fish_index) = 0
 
           ! 除去された魚のインデックス、座標、理由を表示
           print '(A, I4, A)', 'Fish ', fish_index, ' is removed because it is placed in the obstacle cell.'
@@ -1350,7 +1350,7 @@ contains
     fish_coordinate_eta(fish_index) = eta
 
     !> 魚の生存フラグを更新
-    is_fish_alived(fish_index) = 0
+    is_fish_alive(fish_index) = 0
 
     ! 除去された魚のインデックス、座標、理由を表示
     print '(A, I4, A, F10.5, A, F10.5)', 'Fish ', fish_index, ' is removed because it entered an obstacle and could not escape.'
@@ -1449,7 +1449,7 @@ contains
     else
       ! 周期境界じゃない場合範囲外のトレーサーは除去
       if (fish_position_xi < 0.0 .or. 1.0 + tolerance < fish_position_xi) then
-        is_fish_alived(fish_index) = 0
+        is_fish_alive(fish_index) = 0
 
         ! 座標を更新しておく
         fish_coordinate_xi(fish_index) = fish_position_xi
@@ -1577,7 +1577,7 @@ contains
       !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
       ! 魚の生存フラグが立っていない場合はスキップ
       !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-      if (is_fish_alived(fish_index) == 0) cycle
+      if (is_fish_alive(fish_index) == 0) cycle
 
       !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
       ! 魚の挙動が前回から引き続き最小水深以下での挙動をするかのフラグをチェック
@@ -1873,7 +1873,7 @@ contains
       !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
       call fish_periodic_handling(fish_index, moved_position_xi, moved_position_eta, is_periodic_moved)
       ! 周期境界条件の中で魚が除去された場合は次の魚へ
-      if (is_fish_alived(fish_index) == 0) cycle
+      if (is_fish_alive(fish_index) == 0) cycle
 
       !==========================================================================================
       ! 移動後の魚の位置のセルのインデックス、セル内の座標を計算
@@ -1975,7 +1975,7 @@ contains
         !------------------------------------------------------------------------------------------
         call fish_periodic_handling(fish_index, moved_position_xi, moved_position_eta, is_periodic_moved)
         ! 周期境界条件の中で魚が除去された場合は次の魚へ
-        if (is_fish_alived(fish_index) == 0) cycle
+        if (is_fish_alive(fish_index) == 0) cycle
 
         !------------------------------------------------------------------------------------------
         ! 再移動後の魚の位置のセルのインデックス、セル内の座標を計算
@@ -2000,7 +2000,7 @@ contains
                                     moved_position_xi_in_cell, moved_position_eta_in_cell)
 
         ! 障害物処理で除去された場合は次の魚へ
-        if (is_fish_alived(fish_index) == 0) cycle
+        if (is_fish_alive(fish_index) == 0) cycle
 
       end if
 
@@ -2079,7 +2079,7 @@ contains
                                   fish_position_eta_in_cell + &
                                   scale_factor_xi(fish_position_i, fish_position_j)* &
                                   (grid_interval_eta - fish_position_eta_in_cell)) &
-                                 /grid_interval_eta
+                                 *inverse_grid_interval_eta
 
     ! 魚の地点でのxi方向ジャンプ距離を計算
     jumpable_distance_xi = jumpable_distance(fish_group(fish_index))*fish_point_scale_factor_xi
@@ -2095,7 +2095,7 @@ contains
     !==========================================================================================
     call fish_periodic_handling(fish_index, jumped_position_xi, jumped_position_eta, is_periodic_moved)
     ! 周期境界条件の中で魚が除去された場合は次の魚へ
-    if (is_fish_alived(fish_index) == 0) return
+    if (is_fish_alive(fish_index) == 0) return
 
     !==========================================================================================
     ! 移動後の場所でのチェック・処理
@@ -2118,7 +2118,7 @@ contains
                                   jumped_position_xi_in_cell, jumped_position_eta_in_cell)
 
       ! 障害物処理で除去された場合は次の魚へ
-      if (is_fish_alived(fish_index) == 0) return
+      if (is_fish_alive(fish_index) == 0) return
 
     end if
 
@@ -2159,7 +2159,7 @@ contains
     !> 魚の存在するセル内のη方向座標
     real(8) :: fish_position_eta_in_cell
     !> 生存可能な魚の数
-    integer :: fish_count_alived
+    integer :: fish_count_alive
 
     !==========================================================================================
     ! 魚のポリゴン形状、各魚の持つ属性の出力
@@ -2167,15 +2167,15 @@ contains
     call cg_iric_write_sol_polydata_groupbegin(cgnsOut, "Fish", is_error)
 
     ! 生存魚数のカウンターをリセット
-    fish_count_alived = 0
+    fish_count_alive = 0
 
     do fish_index = 1, fish_count
 
       ! 魚の生存フラグが立っていない場合はスキップ
-      if (is_fish_alived(fish_index) == 0) cycle
+      if (is_fish_alive(fish_index) == 0) cycle
 
       ! 生存魚数をカウント
-      fish_count_alived = fish_count_alived + 1
+      fish_count_alive = fish_count_alive + 1
 
       !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
       ! 魚の物理座標を計算してポリゴンの座標を計算・出力
@@ -2255,7 +2255,7 @@ contains
     ! 統計など時系列で単一の属性を出力
     !==========================================================================================
     ! 生存魚数を出力
-    call cg_iric_write_sol_baseiterative_integer(cgnsOut, "Number of Alived Fish", fish_count_alived, is_error)
+    call cg_iric_write_sol_baseiterative_integer(cgnsOut, "Number of Alive Fish", fish_count_alive, is_error)
     ! 任意断面を通過した魚の数を出力
     if (is_count_fish == 1) then
       call cg_iric_write_sol_baseiterative_integer(cgnsOut, "Number of Fish passed through the section", passed_fish_count, is_error)

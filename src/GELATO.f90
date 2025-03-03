@@ -6,6 +6,7 @@ program gelate
   use result
   use trace
   use fish_module
+  use landscape_poly
   use timer_module
 
   implicit none
@@ -114,6 +115,13 @@ program gelate
   if (is_simulation_fish == 1) call initialize_fish_tracer()
   ! 魚の数をカウントするセクションのポリゴン形状を作成
   if (is_simulation_fish == 1 .and. is_count_fish == 1) call create_fish_counting_section()
+
+  !==========================================================================================
+  ! 樹木、礫の設定の読み込み、初期化
+  !==========================================================================================
+  if (is_draw_tree == 1 .or. is_draw_gravel == 1) then
+    call initialize_object()
+  end if
 
   !******************************************************************************************
   ! 初期状態の計算、アウトプット
@@ -224,6 +232,11 @@ program gelate
   ! センターラインの出力
   if (is_draw_center_line == 1) call output_center_line()
 
+  ! 樹木、礫の出力
+  if (is_draw_tree == 1 .or. is_draw_gravel == 1) then
+    call output_landscape_object()
+  end if
+
   call cg_iric_write_sol_end(cgnsOut, is_error)
 
   !******************************************************************************************
@@ -312,7 +325,7 @@ program gelate
       end if
 
       ! 出力タイムステップを増加
-      call increment_integer_value(time_step_out, 1)
+      time_step_out = time_step_out + 1
 
       ! 計算結果出力開始を宣言
       call cg_iric_write_sol_start(cgnsOut, is_error)
@@ -338,7 +351,7 @@ program gelate
           time_since_start = time_trace - time_out_initial
 
           ! トレーサー追加のカウンター更新
-          call increment_real_value(time_counter_add_normal_tracer, time_interval_for_tracking)
+          time_counter_add_normal_tracer = time_counter_add_normal_tracer + time_interval_for_tracking
 
           !------------------------------------------------------------------------------------------
           ! トレーサーの追跡
@@ -424,6 +437,13 @@ program gelate
       !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
       if (is_draw_center_line == 1) call output_center_line()
 
+      !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      ! 樹木、礫の出力
+      !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      if (is_draw_tree == 1 .or. is_draw_gravel == 1) then
+        call output_landscape_object()
+      end if
+
       ! 出力終了を宣言
       call cg_iric_write_sol_end(cgnsOut, is_error)
 
@@ -485,10 +505,10 @@ contains
     else
       write (*, '(a)') "  Fish simulation                   :         enable"
     end if
-    if (is_draw_vegetation == 0) then
-      write (*, '(a)') "  Drawing vegetation                :        disable"
+    if (is_draw_tree == 0) then
+      write (*, '(a)') "  Drawing tree                      :        disable"
     else
-      write (*, '(a)') "  Drawing vegetation                :         enable"
+      write (*, '(a)') "  Drawing tree                      :         enable"
     end if
     if (is_draw_gravel == 0) then
       write (*, '(a)') "  Drawing gravel                    :        disable"

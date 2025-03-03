@@ -44,7 +44,7 @@ module grid
   !> マニング粗度(格子点)
   real(8), dimension(:, :), allocatable :: roughness_node
   !> 植生発生セル
-  integer, dimension(:, :), allocatable :: is_vegetation_cell
+  integer, dimension(:, :), allocatable :: is_tree_cell
   !> 礫発生セル
   integer, dimension(:, :), allocatable :: is_gravel_cell
   !> トレーサートラップセル
@@ -53,8 +53,10 @@ module grid
   !******************************************************************************************
   ! 一般化座標系関係
   !******************************************************************************************
-  !> ξ方向一般座標系格子
+  !> ξ方向一般座標系格子間隔
   real(8) :: grid_interval_xi
+  !> ξ方向一般座標系格子間隔の逆数
+  real(8) :: inverse_grid_interval_xi
   !> ξ方向物理座標での格子点間距離の最小値
   real(8) :: grid_physical_distance_xi_min
   !> ξ方向スケーリング係数
@@ -70,6 +72,8 @@ module grid
 
   !> η方向一般座標系格子間隔
   real(8) :: grid_interval_eta
+  !> η方向一般座標系格子間隔の逆数
+  real(8) :: inverse_grid_interval_eta
   !> η方向物理座標での格子点間距離の最小値
   real(8) :: grid_physical_distance_eta_min
   !> η方向スケーリング係数
@@ -119,7 +123,7 @@ contains
     allocate (is_cloning_cell(cell_count_i, cell_count_j))
     allocate (roughness_cell(cell_count_i, cell_count_j))
     allocate (roughness_node(node_count_i, node_count_j))
-    allocate (is_vegetation_cell(cell_count_i, cell_count_j))
+    allocate (is_tree_cell(cell_count_i, cell_count_j))
     allocate (is_gravel_cell(cell_count_i, cell_count_j))
     allocate (trap_cell(cell_count_i, cell_count_j))
 
@@ -131,7 +135,7 @@ contains
     call cg_iric_read_grid_integer_cell(cgnsOut, "obstacle", obstacle_cell, is_error)
     call cg_iric_read_grid_integer_cell(cgnsOut, "is_tracer_cloning", is_cloning_cell, is_error)
     call cg_iric_read_grid_real_cell(cgnsOut, "roughness_cell", roughness_cell, is_error)
-    call cg_iric_read_grid_integer_cell(cgnsOut, "is_vegetation_cell", is_vegetation_cell, is_error)
+    call cg_iric_read_grid_integer_cell(cgnsOut, "is_tree_cell", is_tree_cell, is_error)
     call cg_iric_read_grid_integer_cell(cgnsOut, "is_gravel_cell", is_gravel_cell, is_error)
     call cg_iric_read_grid_integer_cell(cgnsOut, "trap_cell", trap_cell, is_error)
 
@@ -185,6 +189,8 @@ contains
     !==========================================================================================
     grid_interval_xi = 1./(cell_count_i)
     grid_interval_eta = 1./(cell_count_j)
+    inverse_grid_interval_xi = 1./grid_interval_xi
+    inverse_grid_interval_eta = 1./grid_interval_eta
 
     !==========================================================================================
     ! メモリ確保
@@ -253,25 +259,25 @@ contains
         ! xi, eta方向の変位を x, y方向に変換するための変換行列の要素を計算
         !==========================================================================================
         if (i == 1) then
-          xi_to_x_component = (node_coordinate_x(i + 1, j) - node_coordinate_x(i, j))/grid_interval_xi
-          xi_to_y_component = (node_coordinate_y(i + 1, j) - node_coordinate_y(i, j))/grid_interval_xi
+          xi_to_x_component = (node_coordinate_x(i + 1, j) - node_coordinate_x(i, j))*inverse_grid_interval_xi
+          xi_to_y_component = (node_coordinate_y(i + 1, j) - node_coordinate_y(i, j))*inverse_grid_interval_xi
         else if (i == node_count_i) then
-          xi_to_x_component = (node_coordinate_x(i, j) - node_coordinate_x(i - 1, j))/grid_interval_xi
-          xi_to_y_component = (node_coordinate_y(i, j) - node_coordinate_y(i - 1, j))/grid_interval_xi
+          xi_to_x_component = (node_coordinate_x(i, j) - node_coordinate_x(i - 1, j))*inverse_grid_interval_xi
+          xi_to_y_component = (node_coordinate_y(i, j) - node_coordinate_y(i - 1, j))*inverse_grid_interval_xi
         else
-          xi_to_x_component = (node_coordinate_x(i + 1, j) - node_coordinate_x(i - 1, j))/(2.*grid_interval_xi)
-          xi_to_y_component = (node_coordinate_y(i + 1, j) - node_coordinate_y(i - 1, j))/(2.*grid_interval_xi)
+          xi_to_x_component = (node_coordinate_x(i + 1, j) - node_coordinate_x(i - 1, j))*0.5*inverse_grid_interval_xi
+          xi_to_y_component = (node_coordinate_y(i + 1, j) - node_coordinate_y(i - 1, j))*0.5*inverse_grid_interval_xi
         end if
 
         if (j == 1) then
-          eta_to_x_component = (node_coordinate_x(i, j + 1) - node_coordinate_x(i, j))/grid_interval_eta
-          eta_to_y_component = (node_coordinate_y(i, j + 1) - node_coordinate_y(i, j))/grid_interval_eta
+          eta_to_x_component = (node_coordinate_x(i, j + 1) - node_coordinate_x(i, j))*inverse_grid_interval_eta
+          eta_to_y_component = (node_coordinate_y(i, j + 1) - node_coordinate_y(i, j))*inverse_grid_interval_eta
         else if (j == node_count_j) then
-          eta_to_x_component = (node_coordinate_x(i, j) - node_coordinate_x(i, j - 1))/grid_interval_eta
-          eta_to_y_component = (node_coordinate_y(i, j) - node_coordinate_y(i, j - 1))/grid_interval_eta
+          eta_to_x_component = (node_coordinate_x(i, j) - node_coordinate_x(i, j - 1))*inverse_grid_interval_eta
+          eta_to_y_component = (node_coordinate_y(i, j) - node_coordinate_y(i, j - 1))*inverse_grid_interval_eta
         else
-          eta_to_x_component = (node_coordinate_x(i, j + 1) - node_coordinate_x(i, j - 1))/(2.*grid_interval_eta)
-          eta_to_y_component = (node_coordinate_y(i, j + 1) - node_coordinate_y(i, j - 1))/(2.*grid_interval_eta)
+          eta_to_x_component = (node_coordinate_x(i, j + 1) - node_coordinate_x(i, j - 1))*0.5*inverse_grid_interval_eta
+          eta_to_y_component = (node_coordinate_y(i, j + 1) - node_coordinate_y(i, j - 1))*0.5*inverse_grid_interval_eta
         end if
 
         !==========================================================================================
