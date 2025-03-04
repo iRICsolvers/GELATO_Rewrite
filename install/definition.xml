@@ -1226,7 +1226,7 @@
 			<!-- 一定のマニング粗度係数の値 -->
 			<Item name="constant_roughness" caption="Manning&apos;s Roughness Coefficient">
 				<Definition valueType="real"  default="0.03" tooltips="The Manning's roughness coefficient is used to calculate the friction velocity and eddy viscosity coefficient.">
-					<Condition type="isEqual" target="is_use_constant_roughness" value="0" />
+					<Condition type="isEqual" target="is_use_constant_roughness" value="1" />
 				</Definition>
 			</Item>
 
