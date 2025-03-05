@@ -910,7 +910,7 @@ contains
                                                                         supply_position_eta_in_cell)
 
             ! 投入箇所が障害物セルではなく、最小水深以上の場合はフラグを立ててループを抜ける
-            if ((obstacle_cell(supply_position_i, supply_position_j) == 0) .or. (supply_position_depth >= movable_critical_depth_fish(fish_group(fish_index)))) then
+            if ((obstacle_cell(supply_position_i, supply_position_j) == 0) .and. (supply_position_depth >= movable_critical_depth_fish(fish_group(fish_index)))) then
               is_supplyable = 1
             end if
 
