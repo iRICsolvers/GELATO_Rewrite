@@ -3,9 +3,9 @@
 	xmlns="www.iric.net/SolverDefinition/1.0" 
 	name="RE_GELATO" 
 	caption="Re:GELATO" 
-	version="0.0.25030301" 
+	version="0.0.25030501" 
 	copyright="Keita Hoshino" 
-	release="2025.03.03" 
+	release="2025.03.05" 
 	homepage="https://i-ric.org/yasu/" 
 	executable="ReGELATO.exe" 
 	iterationtype="time" 
@@ -818,7 +818,7 @@
 
 					<!-- 限界水深での魚の挙動 -->
 					<Item name="fish_handling_in_critical_depth" caption="Fish Motion in Critical Depth Area">
-						<Definition valueType="integer" default="0">
+						<Definition valueType="integer" default="0" min="0" max="4">
 							<Enumerations>
 								<!-- その場に留まる -->
 								<Enumeration value="0" caption="Stop"/>
@@ -828,6 +828,8 @@
 								<Enumeration value="2" caption="Noswimming"/>
 								<!-- ランダムな方向に泳ぐ -->
 								<Enumeration value="3" caption="Random"/>
+								<!-- 除去される -->
+								<Enumeration value="4" caption="Remove"/>
 							</Enumerations>
 						</Definition>
 					</Item>
