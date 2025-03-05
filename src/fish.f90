@@ -2261,6 +2261,11 @@ contains
       call cg_iric_write_sol_baseiterative_integer(cgnsOut, "Number of Fish passed through the section", passed_fish_count, is_error)
     end if
 
+    !==========================================================================================
+    ! コンソールに魚の数を出力
+    !==========================================================================================
+    write (*, *) "Number of Alive Fish: ", fish_count_alive
+
   end subroutine output_fish
 
   !******************************************************************************************
