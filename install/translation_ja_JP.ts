@@ -381,6 +381,10 @@
             <translation>ランダムな方向に泳ぐ</translation>
         </message>
         <message>
+            <source>Remove</source>
+            <translation>除去される</translation>
+        </message>
+        <message>
             <source>Time During Motion in Critical Depth Area(sec)</source>
             <translation>限界水深未満での挙動の継続時間(sec)</translation>
         </message>

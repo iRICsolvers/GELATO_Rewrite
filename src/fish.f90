@@ -81,6 +81,7 @@ module fish_module
   !> @param 1: 逆方向に泳ぐ
   !> @param 2: 流れに身を任せる
   !> @param 3: ランダムな方向に泳ぐ
+  !> @param 4: 除去される
   integer, dimension(:), allocatable :: fish_handling_in_critical_depth
   !> 移動限界水深での行動時間
   real(8), dimension(:), allocatable :: behavior_time_in_critical_depth
@@ -868,6 +869,7 @@ contains
       else if (fish_handling_unable_to_place == 1) then
         !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         ! 障害物の箇所に配置された場合のみ除去する（最低水深でもそのまま配置する）
+        ! ただし最小水深以下での魚の挙動が除去の場合は除去
         !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
         ! 障害物による除去
@@ -881,9 +883,20 @@ contains
           cycle
         end if
 
+        ! 最小水深以下での挙動が除去の場合は水深でチェックして除去
+        if ((supply_position_depth < movable_critical_depth_fish(fish_group(fish_index))) .and. fish_handling_in_critical_depth(fish_group(fish_index)) == 4) then
+
+          is_fish_alive(fish_index) = 0
+
+          ! 除去された魚のインデックス、座標、理由を表示
+          print '(A, I4, A, I4,A)', 'Fish ', fish_index, 'in group', fish_group(fish_index), ' is removed because it is placed in the critical depth.'
+          print '(A, F5.2, A, F5.2)', 'Fish point depth = ', supply_position_depth, 'Critical depth = ', movable_critical_depth_fish(fish_group(fish_index))
+          cycle
+        end if
+
       else if (fish_handling_unable_to_place == 2) then
         !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        ! 初期位置が障害物セルまたは最小水深以下の場合は再配置
+        ! 初期位置が障害物セルまたは最小水深未満の場合は再配置
         !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         if ((obstacle_cell(supply_position_i, supply_position_j) == 1) .or. (supply_position_depth < movable_critical_depth_fish(fish_group(fish_index)))) then
 
@@ -910,7 +923,7 @@ contains
                                                                         supply_position_eta_in_cell)
 
             ! 投入箇所が障害物セルではなく、最小水深以上の場合はフラグを立ててループを抜ける
-            if ((obstacle_cell(supply_position_i, supply_position_j) == 0) .or. (supply_position_depth >= movable_critical_depth_fish(fish_group(fish_index)))) then
+            if ((obstacle_cell(supply_position_i, supply_position_j) == 0) .and. (supply_position_depth >= movable_critical_depth_fish(fish_group(fish_index)))) then
               is_supplyable = 1
             end if
 
@@ -928,8 +941,9 @@ contains
       else if (fish_handling_unable_to_place == 3) then
         !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         ! 初期位置が障害物セルの場合は再配置(最低水深はそのまま配置)
+        ! ただし最小水深以下での魚の挙動が除去の場合は除去
         !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        if (obstacle_cell(supply_position_i, supply_position_j) == 1) then
+        if (obstacle_cell(supply_position_i, supply_position_j) == 1 .or. ((supply_position_depth < movable_critical_depth_fish(fish_group(fish_index))) .and. fish_handling_in_critical_depth(fish_group(fish_index)) == 4)) then
 
           ! 条件を満たす箇所が見つかるまでランダムで再配置
           do while (is_supplyable == 0)
@@ -946,9 +960,26 @@ contains
                                         supply_position_xi_in_cell, &
                                         supply_position_eta_in_cell)
 
-            ! 投入箇所が障害物セルではない場合はフラグを立ててループを抜ける
-            if (obstacle_cell(supply_position_i, supply_position_j) == 0) then
-              is_supplyable = 1
+            ! 投入箇所が障害物セルではなく、最小水深以上の場合はフラグを立ててループを抜ける
+            if ((obstacle_cell(supply_position_i, supply_position_j) == 0)) then
+
+              ! 最小水深未満での魚の挙動が除去の場合以外はフラグを立ててループを抜ける、除去の場合は水位によるチェックを行う
+              if (fish_handling_in_critical_depth(fish_group(fish_index)) /= 4) then
+                is_supplyable = 1
+              else
+
+                ! 新しい投入箇所の水深を計算
+                supply_position_depth = calculate_scalar_at_tracer_position(depth_node, &
+                                                                            supply_position_i, &
+                                                                            supply_position_j, &
+                                                                            supply_position_xi_in_cell, &
+                                                                            supply_position_eta_in_cell)
+
+                if (supply_position_depth >= movable_critical_depth_fish(fish_group(fish_index))) then
+                  is_supplyable = 1
+                end if
+
+              end if
             end if
 
           end do
@@ -1637,6 +1668,17 @@ contains
             is_fish_in_critical_depth = 1
           end if
 
+        else if (fish_handling_in_critical_depth(fish_group(fish_index)) == 4) then ! 除去される場合
+
+          ! 魚の生存フラグを更新
+          is_fish_alive(fish_index) = 0
+
+          ! 除去された魚のインデックス、座標、理由を表示
+          print '(A, I4, A, F10.5, A, F10.5)', 'Fish ', fish_index, ' was removed because it stayed in the critical depth.'
+
+          ! 魚は除去されるので次の魚へ
+          cycle
+
         else ! その他の挙動の場合
 
           ! 魚が最小水深以下での挙動をするかのフラグを立てる
@@ -1944,6 +1986,17 @@ contains
           call random_number(rand_num)
           fish_angle(fish_index) = fish_angle(fish_index) + pi/2.0*sqrt(-2.0*log(rand_num))*cos(2.0*pi*rand_num)
 
+        else if (fish_handling_in_critical_depth(fish_group(fish_index)) == 4) then   ! 除去される場合
+
+          ! 魚の生存フラグを更新
+          is_fish_alive(fish_index) = 0
+
+          ! 除去された魚のインデックス、座標、理由を表示
+          print '(A, I4, A, F10.5, A, F10.5)', 'Fish ', fish_index, ' was removed because it stayed in the critical depth.'
+
+          ! 魚は除去されるので次の魚へ
+          cycle
+
         end if
 
         !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -2002,6 +2055,30 @@ contains
         ! 障害物処理で除去された場合は次の魚へ
         if (is_fish_alive(fish_index) == 0) cycle
 
+        ! 障害物処理で移動した場合かつ最小水深以下での魚の挙動が除去の場合はチェックを行う
+        if (fish_handling_in_critical_depth(fish_group(fish_index)) == 4) then
+
+          ! 移動後の魚の位置の水深を計算
+          moved_fish_point_depth = calculate_scalar_at_tracer_position(depth_node, &
+                                                                       moved_position_i, &
+                                                                       moved_position_j, &
+                                                                       moved_position_xi_in_cell, &
+                                                                       moved_position_eta_in_cell)
+
+          ! 移動後の魚の位置が最小水深以下の場合は除去
+          if (moved_fish_point_depth < movable_critical_depth_fish(fish_group(fish_index))) then
+            ! 魚の生存フラグを更新
+            is_fish_alive(fish_index) = 0
+
+            ! 除去された魚のインデックス、座標、理由を表示
+            print '(A, I4, A, F10.5, A, F10.5)', 'Fish ', fish_index, ' was removed because it stayed in the critical depth.'
+
+            ! 魚は除去されるので次の魚へ
+            cycle
+          end if
+
+        end if
+
       end if
 
       !==========================================================================================
@@ -2059,6 +2136,8 @@ contains
     real(8) :: jumped_position_xi_in_cell
     !> 魚のジャンプ後の位置のセル内のη方向座標
     real(8) :: jumped_position_eta_in_cell
+    !> 魚のジャンプ後の位置の水深
+    real(8) :: jumped_fish_point_depth
 
     !> 魚の位置のxi方向スケーリングファクタ
     real(8) :: fish_point_scale_factor_xi
@@ -2109,6 +2188,9 @@ contains
                                 jumped_position_xi_in_cell, &
                                 jumped_position_eta_in_cell)
 
+    !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ! 障害物セルに関する処理
+    !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     ! 魚のジャンプ後の位置が障害物セルにある場合は近くに移動する
     if (obstacle_cell(jumped_position_i, jumped_position_j) == 1) then
 
@@ -2119,6 +2201,27 @@ contains
 
       ! 障害物処理で除去された場合は次の魚へ
       if (is_fish_alive(fish_index) == 0) return
+
+    end if
+
+    !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ! 水深による処理
+    !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ! 最小水深以下での挙動が除去された場合は水深によるチェックを行う
+    if (fish_handling_in_critical_depth(fish_group(fish_index)) == 4) then
+
+      ! 魚のジャンプ後の位置の水深を計算
+      jumped_fish_point_depth = calculate_scalar_at_tracer_position(depth_node, &
+                                                                    jumped_position_i, &
+                                                                    jumped_position_j, &
+                                                                    jumped_position_xi_in_cell, &
+                                                                    jumped_position_eta_in_cell)
+
+      ! 魚のジャンプ後の位置が最小水深以下の場合は除去
+      if (jumped_fish_point_depth < movable_critical_depth_fish(fish_group(fish_index))) then
+        is_fish_alive(fish_index) = 0
+        return
+      end if
 
     end if
 
