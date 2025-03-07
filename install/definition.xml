@@ -24,7 +24,7 @@
 
 			<!-- トレーサー追跡の時間間隔 -->
 			<Item name="time_interval_for_tracking" caption="Delta T for Tracer Tracking">
-				<Definition valueType="real" default="0.001"/>
+				<Definition valueType="real" default="0.001" min="0.0000001"/>
 			</Item>
 
 			<!-- 計算終了時間 -->
@@ -34,7 +34,7 @@
 
 			<!-- 出力間隔倍率 -->
 			<Item name="output_interval_magnification" caption="Output Frequency Increase Factor">
-				<Definition valueType="integer" default="1" max="100"/>
+				<Definition valueType="integer" default="1" min="1"/>
 			</Item>
 
 			<!-- オリジナルの時刻を使用するか -->
@@ -236,7 +236,7 @@
 
 				<!-- 通常トレーサーの散布時間間隔 -->
 				<Item name="supply_time_interval_normal_tracers" caption="Supplying Time Interval">
-					<Definition valueType="real" default="0.1">
+					<Definition valueType="real" default="0.1" min="0.0000001">
 						<Condition type="or">
 							<Condition type="isEqual" target="is_trace_primary" value="1"/>
 							<Condition type="isEqual" target="is_trace_secondary" value="1"/>
@@ -249,6 +249,11 @@
 			<!-- 輸送の周期境界条件 -->
 			<Item name="is_periodic_boundary_condition_Tracers" caption="Periodic Boundary Condition for Tracers">
 				<Definition valueType="integer" default="0" checkBox="true"/>
+					<Condition type="or">
+						<Condition type="isEqual" target="is_trace_primary" value="1"/>
+						<Condition type="isEqual" target="is_trace_secondary" value="1"/>
+					</Condition>
+				<Definition />
 			</Item>
 
 			<!-- 停止したトレーサーの扱い -->
@@ -366,7 +371,7 @@
 						</Definition>
 					</Item>
 					<Item name="supply_interval_eta_primary" caption="d_eta">
-						<Definition valueType="real" default="0.02" max="1" min="0">
+						<Definition valueType="real" default="0.02" max="1" min="0.0000001">
 							<Condition type="isEqual" target="is_trace_primary" value="1"/>
 						</Definition>
 					</Item>
@@ -505,7 +510,7 @@
 
 					<!-- 配置間隔 -->
 					<Item name="supply_interval_xi_secondary" caption="d_xi">
-						<Definition valueType="real" default="0.1" max="1" min="0">
+						<Definition valueType="real" default="0.1" max="1" min="0.0000001">
 							<Condition type="isEqual" target="is_trace_secondary" value="1"/>
 						</Definition>
 					</Item>
@@ -526,7 +531,7 @@
 						</Definition>
 					</Item>
 					<Item name="supply_interval_eta_secondary" caption="d_eta">
-						<Definition valueType="real" default="0.02" max="1" min="0">
+						<Definition valueType="real" default="0.02" max="1" min="0.0000001">
 							<Condition type="isEqual" target="is_trace_secondary" value="1"/>
 						</Definition>
 					</Item>
@@ -671,7 +676,7 @@
 
 					<!-- 配置間隔 -->
 					<Item name="supply_interval_xi_trajectory" caption="d_xi">
-						<Definition valueType="real" default="0.1">
+						<Definition valueType="real" default="0.1" min="0.0000001">
 							<Condition type="isEqual" target="is_trace_trajectory" value="1"/>
 						</Definition>
 					</Item>
@@ -697,7 +702,7 @@
 
 					<!-- 配置間隔 -->
 					<Item name="supply_interval_eta_trajectory" caption="d_eta">
-						<Definition valueType="real" default="0.02">
+						<Definition valueType="real" default="0.02" min="0.0000001">
 							<Condition type="isEqual" target="is_trace_trajectory" value="1"/>
 						</Definition>
 					</Item>
@@ -746,7 +751,7 @@
 				</Item>
 				<!-- ウィンドマップラインの保存間隔 -->
 				<Item name="save_interval_windmap_line" caption="Time Step for Windmap Memory(sec)">
-					<Definition valueType="real" default="1">
+					<Definition valueType="real" default="1" min="0.0000001">
 						<Condition type="isEqual" target="is_draw_windmap" value="1"/>
 					</Definition>
 				</Item>
@@ -935,7 +940,7 @@
 
 					<!-- 間隔 -->
 					<Item name="supply_interval_xi_fish" caption="d_xi">
-						<Definition valueType="real" default="0.1" min="0.0" max="1.0">
+						<Definition valueType="real" default="0.1" min="0.0000001" max="1.0">
 							<Condition type="and">
 								<Condition type="isEqual" target="is_simulation_fish" value="1"/>
 								<Condition type="isEqual" target="fish_arrangement_method" value="1"/>
@@ -970,7 +975,7 @@
 
 					<!-- 間隔 -->
 					<Item name="supply_interval_eta_fish" caption="d_eta">
-						<Definition valueType="real" default="0.02" min="0.0" max="1.0">
+						<Definition valueType="real" default="0.02" min="0.0000001" max="1.0">
 							<Condition type="and">
 								<Condition type="isEqual" target="is_simulation_fish" value="1"/>
 								<Condition type="isEqual" target="fish_arrangement_method" value="1"/>
