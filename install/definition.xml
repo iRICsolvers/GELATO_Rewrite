@@ -1099,7 +1099,6 @@
 				<Definition valueType="real" default="0.001">
 					<Condition type="and">
 						<Condition type="isEqual" target="is_draw_tree" value="1"/>
-						<Condition type="isEqual" target="drawing_target_tree" value="1"/>
 					</Condition>
 
 				</Definition>
@@ -1180,7 +1179,6 @@
 				<Definition valueType="real" default="0.001">
 					<Condition type="and">
 						<Condition type="isEqual" target="is_draw_gravel" value="1"/>
-						<Condition type="isEqual" target="drawing_target_gravel" value="1"/>
 					</Condition>
 
 				</Definition>
