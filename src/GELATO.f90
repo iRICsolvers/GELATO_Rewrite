@@ -269,10 +269,24 @@ program gelate
       stop
     end if
 
+    !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ! 読み込んだ計算結果のタイムステップから出力時間間隔、トレーサー追跡間隔を計算
+    ! 出力時間間隔内で何回トレーサーを追跡するか計算しておく
+    !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     ! 前回のタイムステップからの時間
     delta_time_in = time_in - time_in_previous
     ! 出力時間間隔
     delta_time_out = delta_time_in/output_interval_magnification
+
+    ! MEMO: この処理を入れることで計算が遅くなるので、消してユーザーにちゃんとした値を入れてもらうのが望ましい
+    ! 設定したトレーサー追跡間隔が、出力時間間隔よりも大きい場合は追跡間隔を出力時間間隔に合わせる
+    if (time_interval_for_tracking_in > delta_time_out) then
+      time_interval_for_tracking = delta_time_out
+    else
+      ! 設定したトレーサー追跡間隔が出力時間間隔よりも小さい場合はそのまま使う
+      time_interval_for_tracking = time_interval_for_tracking_in
+    end if
+
     ! 出力までに何回追跡するか
     tracking_count = int(delta_time_out/time_interval_for_tracking + .5)
 

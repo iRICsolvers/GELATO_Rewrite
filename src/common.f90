@@ -20,7 +20,9 @@ module common
   !******************************************************************************************
   ! 計算の基本設定(時間など)
   !******************************************************************************************
-  !> トレーサー追跡の時間間隔
+  !> 読み込んだトレーサー追跡の時間間隔
+  real(8) :: time_interval_for_tracking_in
+  !> トレーサー追跡の時間間隔(出力時間間隔によって変動する可能性あり)
   real(8) :: time_interval_for_tracking
   !> 計算終了時刻
   real(8) :: time_end_out
@@ -166,7 +168,9 @@ contains
     call cg_iric_read_sol_time(cgnsIn, time_step_count_in, time_end_in, is_error)
 
     ! トレーサー追跡の時間間隔
-    call cg_iric_read_real(cgnsOut, "time_interval_for_tracking", time_interval_for_tracking, is_error)
+    call cg_iric_read_real(cgnsOut, "time_interval_for_tracking", time_interval_for_tracking_in, is_error)
+    ! 初期値を設定
+    time_interval_for_tracking = time_interval_for_tracking_in
     ! 計算終了時刻
     call cg_iric_read_real(cgnsOut, "time_end_out", time_end_out, is_error)
     ! 出力時間間隔倍率
