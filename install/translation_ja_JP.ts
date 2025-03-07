@@ -410,7 +410,7 @@
         </message>
         <message>
             <source>How to Set Initial Location</source>
-            <translation>初期位置設定法</translation>
+            <translation>初期位置設定方法</translation>
         </message>
         <message>
             <source>Nondimensional Coordinate</source>
