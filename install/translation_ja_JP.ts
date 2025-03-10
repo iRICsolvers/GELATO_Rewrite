@@ -5,8 +5,8 @@
 -->
     <context>
         <message>
-            <source>Re:GELATO</source>
-            <translation>Re:GELATO</translation>
+            <source>GELATO v2.x</source>
+            <translation>GELATO v2.x</translation>
         </message>
         <message>
             <source>Basic Settings</source>

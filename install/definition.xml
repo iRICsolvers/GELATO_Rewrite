@@ -1,13 +1,13 @@
 ﻿<?xml version="1.0" encoding="UTF-8"?>
 <SolverDefinition 
 	xmlns="www.iric.net/SolverDefinition/1.0" 
-	name="RE_GELATO" 
-	caption="Re:GELATO" 
-	version="0.0.25030501" 
-	copyright="Keita Hoshino" 
-	release="2025.03.05" 
+	name="GELATO" 
+	caption="GELATO v2.x" 
+	version="2.0.25031001" 
+	copyright="Yasuyuki SHIMIZU, Keita Hoshino" 
+	release="2025.03.10" 
 	homepage="https://i-ric.org/yasu/" 
-	executable="ReGELATO.exe" 
+	executable="GELATO.exe" 
 	iterationtype="time" 
 	gridtype="structured2d">
 
