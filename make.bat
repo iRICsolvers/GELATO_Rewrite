@@ -23,7 +23,7 @@ set FLAGS_DEBUG=/Qdiag-disable:10448 /Qopenmp /nostandard-realloc-lhs /MD /trace
 rem ----------------------------------------------------------------------
 rem Link
 rem ----------------------------------------------------------------------
-%FC% *.obj .\lib\iriclib.lib -o ".\install\ReGELATO.exe"
+%FC% *.obj .\lib\iriclib.lib -o ".\install\GELATO.exe"
 
 rem ----------------------------------------------------------------------
 rem Cleanup
