@@ -305,12 +305,12 @@
             <translation>Wind Mapの最大描画本数</translation>
         </message>
         <message>
-            <source>Lifespan of Each Windmap Lines(sec)</source>
-            <translation>個々のWind Map線の寿命(sec)</translation>
+            <source>Maximum Life of Windmap Lines</source>
+            <translation>個々のWind Map線の寿命(保存回数)</translation>
         </message>
         <message>
-            <source>Time Step for Windmap Memory(sec)</source>
-            <translation>Wind Mapの保存時間間隔(sec)</translation>
+            <source>Interval of Windmap Saving</source>
+            <translation>Wind Mapの保存間隔(追跡回数)</translation>
         </message>
         <message>
             <source>Simulation of Fish Motion</source>
