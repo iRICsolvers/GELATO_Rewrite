@@ -744,14 +744,14 @@
 					</Definition>
 				</Item>
 				<!-- ウィンドマップラインの寿命 -->
-				<Item name="display_life_span_windmap_line" caption="Lifespan of Each Windmap Lines(sec)">
-					<Definition valueType="real" default="10">
+				<Item name="display_life_span_windmap_line" caption="Maximum Life of Windmap Lines">
+					<Definition valueType="integer" default="10" min="1">
 						<Condition type="isEqual" target="is_draw_windmap" value="1"/>
 					</Definition>
 				</Item>
 				<!-- ウィンドマップラインの保存間隔 -->
-				<Item name="save_interval_windmap_line" caption="Time Step for Windmap Memory(sec)">
-					<Definition valueType="real" default="1" min="0.0000001">
+				<Item name="save_interval_windmap_line" caption="Interval of Windmap Saving">
+					<Definition valueType="integer" default="1" min="1">
 						<Condition type="isEqual" target="is_draw_windmap" value="1"/>
 					</Definition>
 				</Item>

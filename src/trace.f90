@@ -201,10 +201,6 @@ module trace
 
     !> windmapラインの最大数
     integer:: max_number
-    !> windmapラインの寿命(時間)
-    real(8):: life_time
-    !> windmapラインの保存間隔
-    real(8):: line_save_interval
 
     !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     ! 共通の変数
@@ -2022,18 +2018,11 @@ contains
     ! windmapトレーサー
     !==========================================================================
     call cg_iric_read_integer(cgnsOut, "max_display_number_windmap_line", windmap%max_number, is_error)
-    call cg_iric_read_real(cgnsOut, "display_life_span_windmap_line", windmap%life_time, is_error)
-    call cg_iric_read_real(cgnsOut, "save_interval_windmap_line", windmap%line_save_interval, is_error)
+    call cg_iric_read_integer(cgnsOut, "display_life_span_windmap_line", windmap%max_save_times, is_error)
+    call cg_iric_read_integer(cgnsOut, "save_interval_windmap_line", windmap%save_times_interval, is_error)
 
-    ! windmapの最大保存回数(初期位置も保存するため1多く)
-    windmap%max_save_times = int(windmap%life_time/windmap%line_save_interval) + 1
-    ! windmapの最大保存回数が0以下の場合は1にする
-    if (windmap%max_save_times <= 0) windmap%max_save_times = 2
-
-    ! 何回追跡したら軌跡を保存するか
-    windmap%save_times_interval = int(windmap%line_save_interval/time_interval_for_tracking)
-    ! 保存回数が0以下の場合は1にする
-    if (windmap%save_times_interval <= 0) windmap%save_times_interval = 1
+    ! windmapの最大保存回数を初期位置も保存するため1多くする
+    windmap%max_save_times = windmap%max_save_times + 1
 
     allocate (windmap%tracer_coordinate_xi(windmap%max_number))
     allocate (windmap%tracer_coordinate_eta(windmap%max_number))
