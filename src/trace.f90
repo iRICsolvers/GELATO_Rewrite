@@ -122,8 +122,12 @@ module trace
     !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     !> セル内のトレーサー総数
     integer, dimension(:, :), allocatable :: tracer_number_in_cell
-    !>セル内の重み付きトレーサー数
-    real(8), dimension(:, :), allocatable ::  Weighted_number_in_cell
+    !> セル内のトラップされたトレーサー数
+    integer, dimension(:, :), allocatable :: trapped_tracer_number_in_cell
+    !> セル内の重み付きトレーサー数
+    real(8), dimension(:, :), allocatable ::  weighted_number_in_cell
+    !> セル内のトラップされた重み付きトレーサー数
+    real(8), dimension(:, :), allocatable ::  trapped_weighted_number_in_cell
     !> セル内のトレーサー総数のi断面合計
     integer, dimension(:, :), allocatable :: total_tracer_number_in_cross_section
     !> セル内のトレーサー総数のi断面平均
@@ -505,7 +509,9 @@ contains
     allocate (tracer%is_tracer_arrived(tracer%max_number))
 
     allocate (tracer%tracer_number_in_cell(cell_count_i, cell_count_j))
-    allocate (tracer%Weighted_number_in_cell(cell_count_i, cell_count_j))
+    allocate (tracer%trapped_tracer_number_in_cell(cell_count_i, cell_count_j))
+    allocate (tracer%weighted_number_in_cell(cell_count_i, cell_count_j))
+    allocate (tracer%trapped_weighted_number_in_cell(cell_count_i, cell_count_j))
     allocate (tracer%total_tracer_number_in_cross_section(cell_count_i, cell_count_j))
     allocate (tracer%averaged_tracer_number_in_cross_section(cell_count_i, cell_count_j))
     allocate (tracer%time_integrated_tracer_number_in_cell(cell_count_i, cell_count_j))
@@ -523,7 +529,9 @@ contains
     tracer%total_tracer_number = 0
 
     tracer%tracer_number_in_cell = 0
-    tracer%Weighted_number_in_cell = 0.0
+    tracer%trapped_tracer_number_in_cell = 0
+    tracer%weighted_number_in_cell = 0.0
+    tracer%trapped_weighted_number_in_cell = 0.0
     tracer%total_tracer_number_in_cross_section = 0
     tracer%averaged_tracer_number_in_cross_section = 0.0
     tracer%time_integrated_tracer_number_in_cell = 0.0
@@ -636,7 +644,7 @@ contains
         ! カウンターを更新
         tracer%total_tracer_number = tracer%total_tracer_number + 1
         tracer%tracer_number_in_cell(supply_position_i, supply_position_j) = tracer%tracer_number_in_cell(supply_position_i, supply_position_j) + 1
-        tracer%Weighted_number_in_cell(supply_position_i, supply_position_j) = tracer%Weighted_number_in_cell(supply_position_i, supply_position_j) + 1.0d0
+        tracer%weighted_number_in_cell(supply_position_i, supply_position_j) = tracer%weighted_number_in_cell(supply_position_i, supply_position_j) + 1.0d0
 
         ! トレーサーの状態を入力
         tracer%tracer_coordinate_xi(tracer%total_tracer_number) = supply_position_xi
@@ -721,8 +729,10 @@ contains
     !==========================================================================================
     total_tracer_number_before = tracer%total_tracer_number
     tracer%tracer_number_in_cell = 0
+    tracer%trapped_tracer_number_in_cell = 0
     tracer%total_tracer_number = 0
-    tracer%Weighted_number_in_cell = 0.0
+    tracer%weighted_number_in_cell = 0.0
+    tracer%trapped_weighted_number_in_cell = 0.0
 
     do tracer_index = 1, total_tracer_number_before  ! 既存の全てのトレーサーのループ
 
@@ -739,8 +749,8 @@ contains
       if (tracer%is_tracer_trapped(tracer_index) == 1) then
         ! 移動しないのでトレーサーの個数を更新して次のトレーサーへ
         tracer%total_tracer_number = tracer%total_tracer_number + 1
-        tracer%tracer_number_in_cell(tracer_cell_index_i, tracer_cell_index_j) = tracer%tracer_number_in_cell(tracer_cell_index_i, tracer_cell_index_j) + 1
-        tracer%Weighted_number_in_cell(tracer_cell_index_i, tracer_cell_index_j) = tracer%Weighted_number_in_cell(tracer_cell_index_i, tracer_cell_index_j) + tracer%tracer_weight(tracer_index)
+        tracer%trapped_tracer_number_in_cell(tracer_cell_index_i, tracer_cell_index_j) = tracer%trapped_tracer_number_in_cell(tracer_cell_index_i, tracer_cell_index_j) + 1
+        tracer%trapped_weighted_number_in_cell(tracer_cell_index_i, tracer_cell_index_j) = tracer%trapped_weighted_number_in_cell(tracer_cell_index_i, tracer_cell_index_j) + tracer%tracer_weight(tracer_index)
         cycle
       end if
 
@@ -774,7 +784,7 @@ contains
       if (tracer%is_tracer_movable(tracer_index) == 0) then
         tracer%total_tracer_number = tracer%total_tracer_number + 1
         tracer%tracer_number_in_cell(tracer_cell_index_i, tracer_cell_index_j) = tracer%tracer_number_in_cell(tracer_cell_index_i, tracer_cell_index_j) + 1
-        tracer%Weighted_number_in_cell(tracer_cell_index_i, tracer_cell_index_j) = tracer%Weighted_number_in_cell(tracer_cell_index_i, tracer_cell_index_j) + tracer%tracer_weight(tracer_index)
+        tracer%weighted_number_in_cell(tracer_cell_index_i, tracer_cell_index_j) = tracer%weighted_number_in_cell(tracer_cell_index_i, tracer_cell_index_j) + tracer%tracer_weight(tracer_index)
         cycle
       end if
 
@@ -837,8 +847,8 @@ contains
       if (tracer%is_tracer_trapped(tracer_index) == 1) then
         ! 移動しないのでトレーサーの個数を更新して次のトレーサーへ
         tracer%total_tracer_number = tracer%total_tracer_number + 1
-        tracer%tracer_number_in_cell(tracer_cell_index_i, tracer_cell_index_j) = tracer%tracer_number_in_cell(tracer_cell_index_i, tracer_cell_index_j) + 1
-        tracer%Weighted_number_in_cell(tracer_cell_index_i, tracer_cell_index_j) = tracer%Weighted_number_in_cell(tracer_cell_index_i, tracer_cell_index_j) + tracer%tracer_weight(tracer_index)
+        tracer%trapped_tracer_number_in_cell(tracer_cell_index_i, tracer_cell_index_j) = tracer%trapped_tracer_number_in_cell(tracer_cell_index_i, tracer_cell_index_j) + 1
+        tracer%trapped_weighted_number_in_cell(tracer_cell_index_i, tracer_cell_index_j) = tracer%trapped_weighted_number_in_cell(tracer_cell_index_i, tracer_cell_index_j) + tracer%tracer_weight(tracer_index)
         cycle
       end if
 
@@ -986,7 +996,7 @@ contains
         ! カウンターを更新
         tracer%total_tracer_number = tracer%total_tracer_number + 1
         tracer%tracer_number_in_cell(moved_position_i, moved_position_j) = tracer%tracer_number_in_cell(moved_position_i, moved_position_j) + 1
-        tracer%Weighted_number_in_cell(moved_position_i, moved_position_j) = tracer%Weighted_number_in_cell(moved_position_i, moved_position_j) + tracer%tracer_weight(tracer_index)
+        tracer%weighted_number_in_cell(moved_position_i, moved_position_j) = tracer%weighted_number_in_cell(moved_position_i, moved_position_j) + tracer%tracer_weight(tracer_index)
       end if
 
     end do
@@ -1234,7 +1244,7 @@ contains
           ! カウンターを更新
           tracer%total_tracer_number = tracer%total_tracer_number + 1
           tracer%tracer_number_in_cell(supply_position_i, supply_position_j) = tracer%tracer_number_in_cell(supply_position_i, supply_position_j) + 1
-          tracer%Weighted_number_in_cell(supply_position_i, supply_position_j) = tracer%Weighted_number_in_cell(supply_position_i, supply_position_j) + 1.0d0
+          tracer%weighted_number_in_cell(supply_position_i, supply_position_j) = tracer%weighted_number_in_cell(supply_position_i, supply_position_j) + 1.0d0
 
           ! トレーサーの状態を入力
           tracer%tracer_coordinate_xi(tracer%total_tracer_number) = supply_position_xi
@@ -1368,7 +1378,9 @@ contains
     ! セルの属性について
     !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     call cg_iric_write_sol_cell_real(cgnsOut, "Numbers of Tracers ("//trim(suffix)//")", real(tracer%tracer_number_in_cell, kind=8), is_error)
-    call cg_iric_write_sol_cell_real(cgnsOut, "Weighted Numbers of Tracers ("//trim(suffix)//")", tracer%Weighted_number_in_cell, is_error)
+    call cg_iric_write_sol_cell_real(cgnsOut, "Nunmbers of Trapped Tracers ("//trim(suffix)//")", real(tracer%trapped_tracer_number_in_cell, kind=8), is_error)
+    call cg_iric_write_sol_cell_real(cgnsOut, "Weighted Numbers of Tracers ("//trim(suffix)//")", tracer%weighted_number_in_cell, is_error)
+    call cg_iric_write_sol_cell_real(cgnsOut, "Weighted Numbers of Trapped Tracers ("//trim(suffix)//")", tracer%trapped_weighted_number_in_cell, is_error)
     call cg_iric_write_sol_cell_real(cgnsOut, "Tracer Numbers in Each Section("//trim(suffix)//")", real(tracer%total_tracer_number_in_cross_section, kind=8), is_error)
     call cg_iric_write_sol_cell_real(cgnsOut, "Cross-Sectional Averaged Tracer Numbers("//trim(suffix)//")", tracer%averaged_tracer_number_in_cross_section, is_error)
     call cg_iric_write_sol_cell_real(cgnsOut, "Time-Integrated Tracer Counts in Cells ("//trim(suffix)//")", tracer%time_integrated_tracer_number_in_cell, is_error)

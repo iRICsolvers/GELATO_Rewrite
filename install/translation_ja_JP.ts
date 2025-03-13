@@ -673,8 +673,16 @@
             <translation>粒子数(プライマリー)</translation>
         </message>
         <message>
+            <source>Numbers of Tracers (Primary)</source>
+            <translation>補足された粒子数(プライマリー)</translation>
+        </message>
+        <message>
             <source>Weighted Numbers of Tracers (Primary)</source>
             <translation>重み付き粒子数(プライマリー)</translation>
+        </message>
+        <message>
+            <source>Weighted Numbers of Tracers (Primary)</source>
+            <translation>補足された重み付き粒子数(プライマリー)</translation>
         </message>
         <message>
             <source>Tracer Numbers in Each Section(Primary)</source>
@@ -697,8 +705,12 @@
             <translation>粒子数(セカンダリー)</translation>
         </message>
         <message>
+            <source>Numbers of Tracers (Secondary)</source>
+            <translation>補足された粒子数(セカンダリー)</translation>
+        </message>
+        <message>
             <source>Weighted Numbers of Tracers (Secondary)</source>
-            <translation>重み付き粒子数(セカンダリー)</translation>
+            <translation>補足された重み付き粒子数(セカンダリー)</translation>
         </message>
         <message>
             <source>Tracer Numbers in Each Section(Secondary)</source>
