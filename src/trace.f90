@@ -1373,11 +1373,11 @@ contains
     !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     ! セルの属性について
     !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    call cg_iric_write_sol_cell_real(cgnsOut, "Numbers of Tracers ("//trim(suffix)//")", real(tracer%tracer_number_in_cell, kind=8), is_error)
-    call cg_iric_write_sol_cell_real(cgnsOut, "Nunmbers of Trapped Tracers ("//trim(suffix)//")", real(tracer%trapped_tracer_number_in_cell, kind=8), is_error)
+    call cg_iric_write_sol_cell_integer(cgnsOut, "Numbers of Tracers ("//trim(suffix)//")", tracer%tracer_number_in_cell, is_error)
+    call cg_iric_write_sol_cell_integer(cgnsOut, "Numbers of Trapped Tracers ("//trim(suffix)//")", tracer%trapped_tracer_number_in_cell, is_error)
     call cg_iric_write_sol_cell_real(cgnsOut, "Weighted Numbers of Tracers ("//trim(suffix)//")", tracer%weighted_number_in_cell, is_error)
     call cg_iric_write_sol_cell_real(cgnsOut, "Weighted Numbers of Trapped Tracers ("//trim(suffix)//")", tracer%trapped_weighted_number_in_cell, is_error)
-    call cg_iric_write_sol_cell_real(cgnsOut, "Tracer Numbers in Each Section("//trim(suffix)//")", real(tracer%total_tracer_number_in_cross_section, kind=8), is_error)
+    call cg_iric_write_sol_cell_integer(cgnsOut, "Tracer Numbers in Each Section("//trim(suffix)//")", tracer%total_tracer_number_in_cross_section, is_error)
     call cg_iric_write_sol_cell_real(cgnsOut, "Cross-Sectional Averaged Tracer Numbers("//trim(suffix)//")", tracer%averaged_tracer_number_in_cross_section, is_error)
     call cg_iric_write_sol_cell_real(cgnsOut, "Time-Integrated Tracer Counts in Cells ("//trim(suffix)//")", tracer%time_integrated_tracer_number_in_cell, is_error)
     call cg_iric_write_sol_cell_real(cgnsOut, "Averaged Tracer Counts ("//trim(suffix)//")", tracer%time_averaged_tracer_number_in_cell, is_error)
