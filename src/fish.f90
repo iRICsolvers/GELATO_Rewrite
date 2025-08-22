@@ -247,6 +247,10 @@ contains
       call cg_iric_read_complex_integer(cgnsOut, 'fish_information_list', i, 'fish_handling_when_jumping_failed', fish_handling_when_jumping_failed(i), is_error)
     end do
 
+    ! 魚の表示サイズをかけておく
+    ! 体長によって変化するパラメーターは描画関係のみなので問題ない
+    fish_body_length = fish_body_length * fish_display_size_magnification
+
   end subroutine initialize_fish_tracer
 
   !******************************************************************************************
