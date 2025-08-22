@@ -5,9 +5,9 @@ call "C:\Program Files (x86)\Intel\oneAPI\setvars.bat" intel64 vs2022
 rem ----------------------------------------------------------------------
 rem ifort compile with debug options
 rem ----------------------------------------------------------------------
-set FC=ifort
-set FLAGS_RELEASE=/Qdiag-disable:10448 /Qinline-forceinline /Qip /heap-arrays /O2 /QxSSE4.2 /Qipo1 /Qopenmp /nostandard-realloc-lhs /MD /c
-set FLAGS_DEBUG=/Qdiag-disable:10448 /Qopenmp /nostandard-realloc-lhs /MD /traceback /check all /heap-arrays /c
+set FC=ifx
+set FLAGS_RELEASE= /O2 /QxHost /heap-arrays:0 /Qopenmp /nostandard-realloc-lhs /MD /c /Qdiag-disable:10448
+set FLAGS_DEBUG= /Qopenmp /nostandard-realloc-lhs /MD /traceback /check all /heap-arrays /c /Qdiag-disable:10448
 
 %FC% .\src\iric.f90 %FLAGS_RELEASE%
 %FC% .\src\timer_m.f90 %FLAGS_RELEASE%
