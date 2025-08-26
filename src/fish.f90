@@ -1946,9 +1946,8 @@ contains
       !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
       ! 移動後の魚の位置が最小水深以下の場合、魚の位置を移動前に戻して挙動に応じた位置に再移動する
       ! ただし、再配置後の位置が最小水深以下の場合はそのまま移動しない
-      ! また、すでに最小水深以下での挙動をしている場合は再移動しない
       !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-      if (moved_fish_point_depth < movable_critical_depth_fish(fish_group(fish_index)) .and. is_fish_in_critical_depth == 0) then
+      if (moved_fish_point_depth < movable_critical_depth_fish(fish_group(fish_index))) then
 
         ! 魚の位置を移動前に戻す
         moved_position_xi = fish_coordinate_xi(fish_index)
@@ -1959,6 +1958,9 @@ contains
                                     moved_position_j, &
                                     moved_position_xi_in_cell, &
                                     moved_position_eta_in_cell)
+        
+        ! すでに限界水深以下での動きをしている場合でも再度行動し直すのでタイマーをリセットする。
+        fish_stay_time_in_critical_depth(fish_index) = 0.0
 
         ! 魚の固有タイマーを更新
         call update_fish_timer(fish_index)
