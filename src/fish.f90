@@ -249,7 +249,7 @@ contains
 
     ! 魚の表示サイズをかけておく
     ! 体長によって変化するパラメーターは描画関係のみなので問題ない
-    fish_body_length = fish_body_length * fish_display_size_magnification
+    fish_body_length = fish_body_length*fish_display_size_magnification
 
   end subroutine initialize_fish_tracer
 
@@ -1650,29 +1650,8 @@ contains
       ! 移動前の魚の位置で最小水深以下の場合の処理
       !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
       if (fish_point_depth < movable_critical_depth_fish(fish_group(fish_index))) then
-        if (fish_handling_in_critical_depth(fish_group(fish_index)) == 0) then ! その場から動かない場合
 
-          ! 魚の向きは更新しない
-          ! fish_angle(fish_index) = fish_angle(fish_index)
-
-          ! 固有タイマーを更新
-          call update_fish_timer(fish_index)
-
-          ! 魚は動かないので次の魚へ
-          cycle
-
-        else if (fish_handling_in_critical_depth(fish_group(fish_index)) == 3) then ! ランダムな方向に移動する場合
-
-          if (is_fish_in_critical_depth == 0) then ! 移動前に魚が最小水深以下で、フラグが立っていない場合
-            ! 魚の方向を±90度の範囲を標準偏差とする正規分布に従う乱数でに変更(標準偏差pi/2.0)
-            call random_number(rand_num)
-            fish_angle(fish_index) = fish_angle(fish_index) + pi/2.0*sqrt(-2.0*log(rand_num))*cos(2.0*pi*rand_num)
-
-            ! 魚が最小水深以下での挙動をするかのフラグを立てる
-            is_fish_in_critical_depth = 1
-          end if
-
-        else if (fish_handling_in_critical_depth(fish_group(fish_index)) == 4) then ! 除去される場合
+        if (fish_handling_in_critical_depth(fish_group(fish_index)) == 4) then ! 除去される場合
 
           ! 魚の生存フラグを更新
           is_fish_alive(fish_index) = 0
@@ -1685,10 +1664,14 @@ contains
 
         else ! その他の挙動の場合
 
-          ! 魚が最小水深以下での挙動をするかのフラグを立てる
-          is_fish_in_critical_depth = 1
+          ! 魚の固有タイマーを更新
+          call update_fish_timer(fish_index)
+
+          ! 魚は動かないので次の魚へ
+          cycle
 
         end if
+
       end if
 
       !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1875,7 +1858,7 @@ contains
 
         else if (fish_handling_in_critical_depth(fish_group(fish_index)) == 3) then   ! ランダムに泳ぐ場合
 
-          ! 魚の向きは最小水深行動中は維持なので更新しない
+          ! 魚の向きは発動時に変更し、最小水深行動中は維持なので更新しない
           ! fish_angle(fish_index) = fish_angle(fish_index)
 
         end if
@@ -1946,9 +1929,8 @@ contains
       !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
       ! 移動後の魚の位置が最小水深以下の場合、魚の位置を移動前に戻して挙動に応じた位置に再移動する
       ! ただし、再配置後の位置が最小水深以下の場合はそのまま移動しない
-      ! また、すでに最小水深以下での挙動をしている場合は再移動しない
       !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-      if (moved_fish_point_depth < movable_critical_depth_fish(fish_group(fish_index)) .and. is_fish_in_critical_depth == 0) then
+      if (moved_fish_point_depth < movable_critical_depth_fish(fish_group(fish_index))) then
 
         ! 魚の位置を移動前に戻す
         moved_position_xi = fish_coordinate_xi(fish_index)
@@ -1960,33 +1942,24 @@ contains
                                     moved_position_xi_in_cell, &
                                     moved_position_eta_in_cell)
 
+        ! すでに限界水深以下での動きをしている場合でも再度行動し直すのでタイマーをリセットする。
+        fish_stay_time_in_critical_depth(fish_index) = 0.0
+
         ! 魚の固有タイマーを更新
         call update_fish_timer(fish_index)
 
         !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         ! 再移動のために挙動に応じて魚の向きを変える
+        ! 除去、停止の場合の処理もここで行う
         !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         if (fish_handling_in_critical_depth(fish_group(fish_index)) == 0) then ! その場で動かない場合
 
           ! 魚は動かないので次の魚へ
           cycle
 
-        else if (fish_handling_in_critical_depth(fish_group(fish_index)) == 1) then  ! 逆方向に泳ぐ場合
+        else if (fish_handling_in_critical_depth(fish_group(fish_index)) == 3) then ! ランダムに泳ぐ場合
 
-          ! 魚の向きを流向と同じ方向に設定（本来は逆方向に泳ぐが、ここでは逆方向に泳ぐという意味を持たせる）
-          fish_angle(fish_index) = fish_point_flow_angle
-
-        else if (fish_handling_in_critical_depth(fish_group(fish_index)) == 2) then   ! 流れに身を任せる場合
-
-          ! 魚の向きは通常時と同様に流向と逆方向に設定
-          fish_angle(fish_index) = mod(fish_point_flow_angle + pi, 2*pi)
-
-          ! 魚は流れに身を任せるため、泳ぐ速度は0
-          fish_swim_speed = 0.0
-
-        else if (fish_handling_in_critical_depth(fish_group(fish_index)) == 3) then   ! ランダムに泳ぐ場合
-
-          ! 魚の方向を±90度の範囲を標準偏差とする正規分布に従う乱数でに変更(標準偏差pi/2.0)
+          ! 魚の方向を±90度の範囲を標準偏差とする正規分布に従う乱数で変更(標準偏差pi/2.0)
           call random_number(rand_num)
           fish_angle(fish_index) = fish_angle(fish_index) + pi/2.0*sqrt(-2.0*log(rand_num))*cos(2.0*pi*rand_num)
 
@@ -2002,47 +1975,6 @@ contains
           cycle
 
         end if
-
-        !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        ! 新たな魚の向きに従って再移動する
-        !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-        ! 魚の向きに基づいて速度を設定
-        fish_swim_speed_x = fish_swim_speed*cos(fish_angle(fish_index))
-        fish_swim_speed_y = fish_swim_speed*sin(fish_angle(fish_index))
-
-        ! 魚の移動に関する各成分を合成
-        fish_net_speed_x = fish_point_velocity_x + diffusion_move_speed_x + fish_swim_speed_x
-        fish_net_speed_y = fish_point_velocity_y + diffusion_move_speed_y + fish_swim_speed_y
-
-        !------------------------------------------------------------------------------------------
-        ! 魚の位置を更新
-        !------------------------------------------------------------------------------------------
-
-        ! 一般座標における魚の速度を計算
-        fish_net_speed_xi = fish_point_x_to_xi_component*fish_net_speed_x + fish_point_y_to_xi_component*fish_net_speed_y
-        fish_net_speed_eta = fish_point_x_to_eta_component*fish_net_speed_x + fish_point_y_to_eta_component*fish_net_speed_y
-
-        ! 移動後の魚の一般座標を計算
-        moved_position_xi = fish_coordinate_xi(fish_index) + fish_net_speed_xi*time_interval_for_tracking
-        moved_position_eta = fish_coordinate_eta(fish_index) + fish_net_speed_eta*time_interval_for_tracking
-
-        !------------------------------------------------------------------------------------------
-        ! 領域の境界における処理
-        !------------------------------------------------------------------------------------------
-        call fish_periodic_handling(fish_index, moved_position_xi, moved_position_eta, is_periodic_moved)
-        ! 周期境界条件の中で魚が除去された場合は次の魚へ
-        if (is_fish_alive(fish_index) == 0) cycle
-
-        !------------------------------------------------------------------------------------------
-        ! 再移動後の魚の位置のセルのインデックス、セル内の座標を計算
-        !------------------------------------------------------------------------------------------
-        call find_tracer_cell_index(moved_position_xi, &
-                                    moved_position_eta, &
-                                    moved_position_i, &
-                                    moved_position_j, &
-                                    moved_position_xi_in_cell, &
-                                    moved_position_eta_in_cell)
 
       end if
 
