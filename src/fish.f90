@@ -2033,6 +2033,11 @@ contains
       end if
     end do
 
+    ! 魚の任意断面通過数をコンソールに出力
+    if (is_count_fish == 1) then
+      print '(A, I6)', 'Passed fish count: ', passed_fish_count
+    end if
+
   end subroutine move_fish_tracer
 
   !******************************************************************************************
