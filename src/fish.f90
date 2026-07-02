@@ -393,6 +393,11 @@ contains
     call check_fish_initial_position()
 
     !==========================================================================================
+    ! fish_countが確定したのでCSVファイルを開いてヘッダーを出力
+    !==========================================================================================
+    call open_fish_trajectory_csv()
+
+    !==========================================================================================
     ! 初期配置時の魚のアングルを設定
     ! 初期条件では流速が定まっていない可能性もあるため、ξ方向(上流方向)に向かうように設定
     ! 魚のアングルは物理座標に置ける角度であるため、魚の位置からξ方向の変位とη方向(=0)の変位を微小な仮値で与え物理座標に直した後、角度に変換する。
@@ -446,6 +451,30 @@ contains
     end do
 
   end subroutine add_fish_tracer
+
+  !******************************************************************************************
+  !> @brief 魚の軌跡出力用CSVファイルを開き、ヘッダー行を出力する
+  !******************************************************************************************
+  subroutine open_fish_trajectory_csv()
+
+    !> ヘッダー文字列
+    character(len=:), allocatable :: header
+    !> 一時バッファ
+    character(len=32) :: temp
+    !> ループ用の変数
+    integer :: k
+
+    open (unit=91, file='fish_trajectory.csv', status='replace', action='write')
+
+    header = 'timestep'
+    do k = 1, fish_count
+      write (temp, '(",alive_", i0, ",x_", i0, ",y_", i0)') k, k, k
+      header = header//trim(temp)
+    end do
+
+    write (91, '(a)') trim(header)
+
+  end subroutine open_fish_trajectory_csv
 
   !******************************************************************************************
   !> @brief 魚トレーサーの初期配置(無次元座標の範囲から)
@@ -781,6 +810,7 @@ contains
       if (minval(obstacle_cell) == 1) then
         print *, 'Warning: There is no place to place the fish tracers.'
         write (*, '(a81)') '*********************************** Finish !! ***********************************'
+        close (91)
         call close_cgns()
         call end_timer()
         stop
@@ -2033,11 +2063,6 @@ contains
       end if
     end do
 
-    ! 魚の任意断面通過数をコンソールに出力
-    if (is_count_fish == 1) then
-      print '(A, I6)', 'Passed fish count: ', passed_fish_count
-    end if
-
   end subroutine move_fish_tracer
 
   !******************************************************************************************
@@ -2185,8 +2210,12 @@ contains
 
   !******************************************************************************************
   !> @brief 魚のポリゴン形状、各魚の持つ属性の出力
+  !> @param[in] time_out 出力用の時刻
   !******************************************************************************************
-  subroutine output_fish()
+  subroutine output_fish(time_out)
+
+    !> 出力用の時刻
+    real(8), intent(in) :: time_out
 
     !> 魚のインデックス
     integer :: fish_index
@@ -2213,13 +2242,10 @@ contains
     ! 生存魚数のカウンターをリセット
     fish_count_alive = 0
 
+    ! CSVのデータ行の先頭にtimestepを出力
+    write (91, '(f12.4)', advance='no') time_out
+
     do fish_index = 1, fish_count
-
-      ! 魚の生存フラグが立っていない場合はスキップ
-      if (is_fish_alive(fish_index) == 0) cycle
-
-      ! 生存魚数をカウント
-      fish_count_alive = fish_count_alive + 1
 
       !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
       ! 魚の物理座標を計算してポリゴンの座標を計算・出力
@@ -2239,6 +2265,15 @@ contains
                                          fish_position_eta_in_cell, &
                                          fish_position_x, &
                                          fish_position_y)
+
+      ! CSVにデータを出力（生死に関わらず、物理座標で統一）
+      write (91, '(",", i1, ",", f15.4, ",", f15.4)', advance='no') is_fish_alive(fish_index), fish_position_x, fish_position_y
+
+      ! 魚の生存フラグが立っていない場合はスキップ
+      if (is_fish_alive(fish_index) == 0) cycle
+
+      ! 生存魚数をカウント
+      fish_count_alive = fish_count_alive + 1
 
       ! 魚のポリゴンの形状を計算
       call make_fish_outline(fish_index, fish_position_x, fish_position_y)
@@ -2294,6 +2329,9 @@ contains
 
     ! 魚のポリゴンのグループの出力終了を宣言
     call cg_iric_write_sol_polydata_groupend(cgnsOut, is_error)
+
+    ! CSVの行を改行
+    write (91, *)
 
     !==========================================================================================
     ! 統計など時系列で単一の属性を出力
