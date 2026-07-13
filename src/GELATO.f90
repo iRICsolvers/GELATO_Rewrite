@@ -226,7 +226,7 @@ program gelate
   ! windmapの出力
   if (is_draw_windmap == 1) call write_sol_windmap()
   ! 魚の出力
-  if (is_simulation_fish == 1) call output_fish()
+  if (is_simulation_fish == 1) call output_fish(time_out)
   ! 魚の数をカウントするセクションのポリゴン形状を出力
   if (is_simulation_fish == 1 .and. is_count_fish == 1) call output_fish_counting_section()
   ! センターラインの出力
@@ -264,6 +264,7 @@ program gelate
     if (time_in_previous >= time_end_out) then
       write (*, *) "The output end time has been reached!!"
       write (*, '(a81)') '*********************************** Finish !! ***********************************'
+      close (91)
       call close_cgns()
       call end_timer()
       stop
@@ -312,6 +313,7 @@ program gelate
       if (is_pressed_stop_button == 1) then
         write (*, *) "Solver is stopped because the STOP button was clicked."
         write (*, '(a81)') '*********************************** Finish !! ***********************************'
+        close (91)
         call close_cgns()
         call end_timer()
         stop
@@ -333,6 +335,7 @@ program gelate
       if (time_out > time_end_out) then
         write (*, *) "The output end time has been reached!!"
         write (*, '(a81)') '*********************************** Finish !! ***********************************'
+        close (91)
         call close_cgns()
         call end_timer()
         stop
@@ -440,9 +443,12 @@ program gelate
         ! windmapの出力
         if (is_draw_windmap == 1) call write_sol_windmap()
         ! 魚の出力
-        if (is_simulation_fish == 1) call output_fish()
-        ! 魚の数をカウントするセクションのポリゴン形状を出力
-        if (is_simulation_fish == 1 .and. is_count_fish == 1) call output_fish_counting_section()
+        if (is_simulation_fish == 1) call output_fish(time_out)
+        ! 魚の数をカウントするセクションのポリゴン形状・通過数を出力
+        if (is_simulation_fish == 1 .and. is_count_fish == 1) then
+          call output_fish_counting_section()
+          print '(A, I6)', ' Passed fish count: ', passed_fish_count
+        end if
 
       end if
 
@@ -469,6 +475,7 @@ program gelate
   end do ! time_step = 2, time_step_count_in
 
   write (*, '(a81)') '*********************************** Finish !! ***********************************'
+  close (91)
   call close_cgns()
   call end_timer()
   stop
